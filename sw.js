@@ -1,5 +1,5 @@
-// v:2026-05-13T00:00:00
-const CACHE = 'popspot-v:2026-05-13T00:00:00';
+// v:2026-05-13T09:20:24
+const CACHE = 'popspot-v:2026-05-13T09:20:24';
 self.addEventListener('install', e => { self.skipWaiting(); });
 self.addEventListener('message', e => { if (e.data?.type === 'SKIP_WAITING') self.skipWaiting(); });
 self.addEventListener('activate', e => {
