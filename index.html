@@ -982,6 +982,7 @@ async function loadAdminReports() {
       const d = doc.data();
       const ts = d.createdAt?.toDate?.()?.toLocaleDateString('ko') || '';
       const card = document.createElement('div');
+      card.dataset.reportId = doc.id;
       card.style.cssText = 'background:var(--card);border-radius:12px;padding:14px;margin-bottom:10px;box-shadow:0 2px 8px rgba(0,0,0,0.07)';
       card.innerHTML = `
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
@@ -999,6 +1000,13 @@ async function loadAdminReports() {
   } catch(e) { list.innerHTML = `<div style="color:#E53935;font-size:0.85rem">불러오기 실패: ${e.message}</div>`; }
 }
 
+function removeReportCard(reportId) {
+  const card = document.querySelector(`[data-report-id="${reportId}"]`);
+  if (card) card.remove();
+  const list = document.getElementById('admin-reports-list');
+  if (list && !list.children.length) list.innerHTML = '<div style="color:var(--text2);font-size:0.85rem">신고 내역이 없습니다.</div>';
+}
+
 async function adminDeleteLocation(locationId, reportId) {
   if (!confirm('이 지점을 삭제하시겠어요?')) return;
   try {
@@ -1009,16 +1017,18 @@ async function adminDeleteLocation(locationId, reportId) {
   }
   try {
     await db.collection('popspot_reports').doc(reportId).delete();
-  } catch(e) { /* 신고 문서 삭제 실패는 무시 */ }
+  } catch(e) {
+    showToast('신고 삭제 오류: ' + e.message);
+  }
+  removeReportCard(reportId);
   showToast('✅ 지점이 삭제됐습니다.');
-  loadAdminReports();
 }
 
 async function adminDismissReport(reportId) {
   try {
     await db.collection('popspot_reports').doc(reportId).delete();
+    removeReportCard(reportId);
     showToast('신고를 무시했습니다.');
-    loadAdminReports();
   } catch(e) { showToast('처리 실패: ' + e.message); }
 }
 
