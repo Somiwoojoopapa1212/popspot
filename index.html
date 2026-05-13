@@ -1008,15 +1008,15 @@ async function adminDeleteLocation(locationId, reportId) {
     return;
   }
   try {
-    await db.collection('popspot_reports').doc(reportId).update({ status: 'resolved' });
-  } catch(e) { /* 신고 상태 업데이트 실패는 무시 */ }
+    await db.collection('popspot_reports').doc(reportId).delete();
+  } catch(e) { /* 신고 문서 삭제 실패는 무시 */ }
   showToast('✅ 지점이 삭제됐습니다.');
   loadAdminReports();
 }
 
 async function adminDismissReport(reportId) {
   try {
-    await db.collection('popspot_reports').doc(reportId).update({ status: 'dismissed' });
+    await db.collection('popspot_reports').doc(reportId).delete();
     showToast('신고를 무시했습니다.');
     loadAdminReports();
   } catch(e) { showToast('처리 실패: ' + e.message); }
