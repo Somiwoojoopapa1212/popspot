@@ -1088,6 +1088,10 @@ async function openSheet(docId) {
   const doc = allDocs.find(d => d.id === docId);
   if (!doc) return;
   if (!currentUser) { document.getElementById('login-screen').style.display = 'flex'; return; }
+  // 이전 스와이프로 남은 transform 초기화
+  const sheet = document.getElementById('bottom-sheet');
+  sheet.style.transition = 'none';
+  sheet.style.transform = '';
   currentDocId = docId;
   document.getElementById('sh-name').textContent = doc.name;
   document.getElementById('sh-addr').textContent = '📍 ' + (doc.address || '-');
@@ -1107,7 +1111,10 @@ async function openSheet(docId) {
 }
 
 function closeSheet() {
-  document.getElementById('bottom-sheet').classList.remove('open');
+  const sheet = document.getElementById('bottom-sheet');
+  sheet.style.transform = '';
+  sheet.style.transition = '';
+  sheet.classList.remove('open');
   currentDocId = null;
   setTimeout(() => { document.getElementById('bottom-sheet-body').scrollTop = 0; }, 360);
 }
@@ -1713,17 +1720,26 @@ function showToast(msg) {
 function showLoading() { document.getElementById('loading').classList.remove('hidden'); }
 function hideLoading() { document.getElementById('loading').classList.add('hidden'); }
 
-/* ════ 바텀시트 스와이프 (시트 전체에서 감지, 헤더에서 시작한 경우만 처리) ════ */
+/* ════ 바텀시트 스와이프 ════ */
 (function() {
   const sheet = document.getElementById('bottom-sheet');
-  const HEADER_H = 56;
-  let startY = 0, dragging = false, fromHeader = false;
+  const HEADER_H = 72;
+  let startY = 0, startTime = 0, dragging = false, fromHeader = false;
+
+  function springBack() {
+    sheet.style.transition = 'transform 0.25s cubic-bezier(0.4,0,0.2,1)';
+    sheet.style.transform = '';
+    setTimeout(() => { sheet.style.transition = ''; }, 260);
+  }
+
   sheet.addEventListener('touchstart', e => {
+    if (dragging) return; // 드래그 중 추가 터치 무시
     const rect = sheet.getBoundingClientRect();
     fromHeader = (e.touches[0].clientY - rect.top) < HEADER_H;
     startY = e.touches[0].clientY;
-    dragging = false;
+    startTime = Date.now();
   }, { passive: true });
+
   sheet.addEventListener('touchmove', e => {
     if (!fromHeader) return;
     const dy = e.touches[0].clientY - startY;
@@ -1732,23 +1748,22 @@ function hideLoading() { document.getElementById('loading').classList.add('hidde
     sheet.style.transition = 'none';
     sheet.style.transform = `translateY(${dy}px)`;
   }, { passive: true });
+
   sheet.addEventListener('touchend', e => {
-    if (!fromHeader) return;
+    if (!fromHeader) { dragging = false; return; }
     const dy = e.changedTouches[0].clientY - startY;
-    if (dragging && dy > 60) {
+    const velocity = dy / Math.max(Date.now() - startTime, 1);
+    if (dragging && (dy > 80 || velocity > 0.3)) {
       sheet.style.transition = '';
       closeSheet();
     } else {
-      sheet.style.transition = 'transform 0.25s cubic-bezier(0.4,0,0.2,1)';
-      sheet.style.transform = '';
-      setTimeout(() => { sheet.style.transition = ''; }, 260);
+      springBack();
     }
     dragging = false; fromHeader = false;
   });
+
   sheet.addEventListener('touchcancel', () => {
-    sheet.style.transition = 'transform 0.25s cubic-bezier(0.4,0,0.2,1)';
-    sheet.style.transform = '';
-    setTimeout(() => { sheet.style.transition = ''; }, 260);
+    springBack();
     dragging = false; fromHeader = false;
   });
 })();
