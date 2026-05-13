@@ -279,6 +279,29 @@
       color: var(--coral); font-size: 0.7rem; gap: 4px;
     }
 
+    /* 지점 카드 */
+    .form-place-card { background:#FFF0F3; border-radius:14px; padding:14px; margin-bottom:20px; }
+    .form-place-name { font-weight:700; color:var(--text); }
+    .form-place-addr { font-size:0.82rem; color:var(--text2); margin-top:4px; }
+
+    /* 영업시간 선택기 */
+    .hours-row { display:flex; align-items:center; gap:8px; margin-bottom:10px; }
+    .hours-select {
+      flex:1; padding:10px 8px; border:1.5px solid #FFD0DB; border-radius:10px;
+      font-family:'Pretendard',sans-serif; font-size:0.88rem;
+      background:white; color:var(--text); cursor:pointer; appearance:none;
+      background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23888' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+      background-repeat:no-repeat; background-position:right 8px center;
+    }
+    .hours-sep { color:var(--text2); font-size:0.9rem; flex-shrink:0; }
+    .day-chips { display:flex; flex-wrap:wrap; gap:6px; }
+    .day-chip {
+      padding:6px 12px; border:1.5px solid #FFD0DB; border-radius:20px;
+      font-size:0.82rem; cursor:pointer; color:var(--text2); background:white;
+      font-family:'Pretendard',sans-serif; transition:all 0.15s;
+    }
+    .day-chip.active { border-color:var(--coral); background:var(--coral); color:white; }
+
     .btn-submit {
       width: 100%; padding: 14px; background: var(--coral); color: white;
       border: none; border-radius: 14px; font-family: 'Pretendard', sans-serif;
@@ -438,6 +461,10 @@
       .review-card { background: #231820; border-color: #3A1828; }
       .form-input, .form-textarea { background: #231820; color: var(--text); border-color: #5A2838; }
       .result-opt, .diff-opt { background: #231820; border-color: #5A2838; color: var(--text2); }
+      .form-place-card { background: #2A1020 !important; }
+      .hours-select { background-color:#231820 !important; color:var(--text) !important; border-color:#5A2838 !important; }
+      .day-chip { background:#231820 !important; border-color:#5A2838 !important; color:var(--text2) !important; }
+      .day-chip.active { background:var(--coral) !important; border-color:var(--coral) !important; color:white !important; }
       .search-item { border-bottom-color: #3A1828; }
       .success-rate-bar { background: #231820; }
       .fav-item { background: #231820; }
@@ -571,13 +598,29 @@
     <h2 id="form-title">지점 추가</h2>
   </div>
   <div class="form-body">
-    <div class="form-place-card" id="form-place-card" style="background:#FFF0F3;border-radius:14px;padding:14px;margin-bottom:20px">
-      <div id="form-place-name" style="font-weight:700;color:var(--text)">-</div>
-      <div id="form-place-addr" style="font-size:0.82rem;color:var(--text2);margin-top:4px">-</div>
+    <div class="form-place-card" id="form-place-card">
+      <div id="form-place-name" class="form-place-name">-</div>
+      <div id="form-place-addr" class="form-place-addr">-</div>
     </div>
     <div class="form-section">
       <label class="form-label">영업시간 <span style="font-size:0.75rem;opacity:0.7">(선택사항)</span></label>
-      <input type="text" id="form-hours" class="form-input" placeholder="예: 10:00~24:00 (연중무휴)">
+      <div class="hours-row">
+        <select id="form-hours-open" class="hours-select" onchange="updateHours()"></select>
+        <span class="hours-sep">~</span>
+        <select id="form-hours-close" class="hours-select" onchange="updateHours()"></select>
+      </div>
+      <div class="day-chips" id="form-day-chips">
+        <span style="font-size:0.78rem;color:var(--text2);align-self:center;margin-right:4px">휴무</span>
+        <div class="day-chip" data-day="월" onclick="toggleDay(this)">월</div>
+        <div class="day-chip" data-day="화" onclick="toggleDay(this)">화</div>
+        <div class="day-chip" data-day="수" onclick="toggleDay(this)">수</div>
+        <div class="day-chip" data-day="목" onclick="toggleDay(this)">목</div>
+        <div class="day-chip" data-day="금" onclick="toggleDay(this)">금</div>
+        <div class="day-chip" data-day="토" onclick="toggleDay(this)">토</div>
+        <div class="day-chip" data-day="일" onclick="toggleDay(this)">일</div>
+        <div class="day-chip" data-day="없음" onclick="toggleDay(this)">없음</div>
+      </div>
+      <input type="hidden" id="form-hours">
     </div>
     <div class="form-section">
       <label class="form-label">전화번호 <span style="font-size:0.75rem;opacity:0.7">(선택사항)</span></label>
@@ -1102,14 +1145,69 @@ function selectForAdd(idx) {
   openFormForAdd();
 }
 
+/* ════ 영업시간 선택기 ════ */
+(function initHourSelects() {
+  const times = [];
+  for (let h = 6; h <= 24; h++) {
+    ['00','30'].forEach(m => {
+      if (h === 24 && m === '30') return;
+      times.push(`${String(h).padStart(2,'0')}:${m}`);
+    });
+  }
+  times.push('다음날 01:00', '다음날 02:00');
+  ['form-hours-open','form-hours-close'].forEach((id, idx) => {
+    const sel = document.getElementById(id);
+    if (!sel) return;
+    const ph = document.createElement('option');
+    ph.value = ''; ph.textContent = idx === 0 ? '오픈' : '마감';
+    sel.appendChild(ph);
+    times.forEach(t => {
+      const opt = document.createElement('option');
+      opt.value = t; opt.textContent = t;
+      sel.appendChild(opt);
+    });
+  });
+})();
+
+function toggleDay(el) {
+  const day = el.dataset.day;
+  if (day === '없음') {
+    document.querySelectorAll('.day-chip').forEach(c => c.classList.remove('active'));
+    el.classList.add('active');
+  } else {
+    document.querySelector('.day-chip[data-day="없음"]')?.classList.remove('active');
+    el.classList.toggle('active');
+  }
+  updateHours();
+}
+function updateHours() {
+  const open  = document.getElementById('form-hours-open')?.value;
+  const close = document.getElementById('form-hours-close')?.value;
+  if (!open || !close) { document.getElementById('form-hours').value = ''; return; }
+  const days = [...document.querySelectorAll('.day-chip.active')].map(c => c.dataset.day).filter(d => d !== '없음');
+  const dayStr = days.length ? ` (${days.join('·')} 휴무)` : '';
+  document.getElementById('form-hours').value = `${open}~${close}${dayStr}`;
+}
+function resetHours() {
+  document.getElementById('form-hours-open').value = '';
+  document.getElementById('form-hours-close').value = '';
+  document.querySelectorAll('.day-chip').forEach(c => c.classList.remove('active'));
+  document.getElementById('form-hours').value = '';
+}
+
 function openFormForAdd() {
   if (!selectedPlace) { openSearch('add'); return; }
   document.getElementById('form-title').textContent = '지점 추가';
   document.getElementById('form-place-name').textContent = selectedPlace.name;
   document.getElementById('form-place-addr').textContent = selectedPlace.address;
   document.getElementById('form-submit-btn').textContent = '등록하기';
-  document.getElementById('form-hours').value = '';
-  if (selectedPlace.phone) document.getElementById('form-phone').value = selectedPlace.phone;
+  resetHours();
+  if (selectedPlace.phone) {
+    document.getElementById('form-phone').value = selectedPlace.phone;
+    setTimeout(() => showToast('📞 전화번호가 자동 입력됐습니다'), 400);
+  } else {
+    document.getElementById('form-phone').value = '';
+  }
   document.getElementById('form-memo').value = '';
   const fo = document.getElementById('form-overlay');
   fo.classList.add('open');
