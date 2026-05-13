@@ -758,13 +758,13 @@
       <label class="form-label">결과</label>
       <div class="result-grid">
         <div class="result-opt success-opt" data-val="success" onclick="selectResult('success')">
-          <span class="r-icon">🎉</span>성공
+          <span class="r-icon"><img src="icons/01_success.png" style="width:40px;height:40px;object-fit:contain"></span>성공
         </div>
         <div class="result-opt partial-opt" data-val="partial" onclick="selectResult('partial')">
-          <span class="r-icon">😅</span>아슬아슬
+          <span class="r-icon"><img src="icons/02_partial.png" style="width:40px;height:40px;object-fit:contain"></span>아슬아슬
         </div>
         <div class="result-opt fail-opt" data-val="fail" onclick="selectResult('fail')">
-          <span class="r-icon">😭</span>실패
+          <span class="r-icon"><img src="icons/03_fail.png" style="width:40px;height:40px;object-fit:contain"></span>실패
         </div>
       </div>
     </div>
@@ -785,9 +785,9 @@
     <div class="form-section">
       <label class="form-label">난이도</label>
       <div class="diff-grid">
-        <div class="diff-opt easy"   data-val="easy"   onclick="selectDiff('easy')">😊 쉬움</div>
-        <div class="diff-opt normal" data-val="normal" onclick="selectDiff('normal')">😐 보통</div>
-        <div class="diff-opt hard"   data-val="hard"   onclick="selectDiff('hard')">😤 어려움</div>
+        <div class="diff-opt easy"   data-val="easy"   onclick="selectDiff('easy')"><img src="icons/04_easy.png" style="width:28px;height:28px;object-fit:contain;vertical-align:middle;margin-right:4px"> 쉬움</div>
+        <div class="diff-opt normal" data-val="normal" onclick="selectDiff('normal')"><img src="icons/05_normal.png" style="width:28px;height:28px;object-fit:contain;vertical-align:middle;margin-right:4px"> 보통</div>
+        <div class="diff-opt hard"   data-val="hard"   onclick="selectDiff('hard')"><img src="icons/06_hard.png" style="width:28px;height:28px;object-fit:contain;vertical-align:middle;margin-right:4px"> 어려움</div>
       </div>
     </div>
 
@@ -1003,10 +1003,15 @@ async function adminDeleteLocation(locationId, reportId) {
   if (!confirm('이 지점을 삭제하시겠어요?')) return;
   try {
     await db.collection('popspot_locations').doc(locationId).delete();
+  } catch(e) {
+    showToast('지점 삭제 실패: ' + e.message);
+    return;
+  }
+  try {
     await db.collection('popspot_reports').doc(reportId).update({ status: 'resolved' });
-    showToast('✅ 지점이 삭제됐습니다.');
-    loadAdminReports();
-  } catch(e) { showToast('삭제 실패: ' + e.message); }
+  } catch(e) { /* 신고 상태 업데이트 실패는 무시 */ }
+  showToast('✅ 지점이 삭제됐습니다.');
+  loadAdminReports();
 }
 
 async function adminDismissReport(reportId) {
@@ -1174,7 +1179,9 @@ async function loadReviews(docId) {
       return;
     }
 
-    const resultLabel = { success:'성공 🎉', partial:'아슬아슬 😅', fail:'실패 😭' };
+    const resultIcon  = { success:'icons/01_success.png', partial:'icons/02_partial.png', fail:'icons/03_fail.png' };
+    const resultLabel = { success:'성공', partial:'아슬아슬', fail:'실패' };
+    const diffIcon    = { easy:'icons/04_easy.png', normal:'icons/05_normal.png', hard:'icons/06_hard.png' };
     const diffLabel   = { easy:'쉬움', normal:'보통', hard:'어려움' };
     const diffClass   = { easy:'easy', normal:'normal', hard:'hard' };
 
@@ -1193,11 +1200,11 @@ async function loadReviews(docId) {
             <div class="review-name">${r.userName || '익명'}</div>
             <div class="review-date">${date}</div>
           </div>
-          <span class="result-badge ${r.result}">${resultLabel[r.result] || r.result}</span>
+          <span class="result-badge ${r.result}"><img src="${resultIcon[r.result]||''}" style="width:16px;height:16px;object-fit:contain;vertical-align:middle;margin-right:3px">${resultLabel[r.result] || r.result}</span>
         </div>
         <div class="review-invest">💰 ${(r.investment || 0).toLocaleString()}원 투자</div>
         ${r.prizeName ? `<div class="review-prize">🧸 ${r.prizeName}</div>` : ''}
-        ${r.difficulty ? `<span class="difficulty-badge diff-${diffClass[r.difficulty]}">${diffLabel[r.difficulty]}</span>` : ''}
+        ${r.difficulty ? `<span class="difficulty-badge diff-${diffClass[r.difficulty]}"><img src="${diffIcon[r.difficulty]||''}" style="width:14px;height:14px;object-fit:contain;vertical-align:middle;margin-right:3px">${diffLabel[r.difficulty]}</span>` : ''}
         ${r.content ? `<div class="review-content" style="margin-top:6px">${r.content}</div>` : ''}
         ${photos ? `<div class="review-photos">${photos}</div>` : ''}
       </div>`;
