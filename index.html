@@ -47,6 +47,7 @@
       --partial: #FF9800;
     }
     * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+    .hidden { display: none !important; }
     body { font-family: 'Pretendard', sans-serif; background: var(--bg); color: var(--text); height: 100vh; overflow: hidden; }
 
     /* ══ 헤더 ══ */
@@ -926,12 +927,12 @@ async function loadReviews(docId) {
   try {
     const snap = await db.collection('popspot_reviews')
       .where('locationId', '==', docId)
-      .orderBy('createdAt', 'desc')
-      .limit(20)
       .get();
 
-    // 성공률 계산
-    const reviews = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    // 최신순 정렬 (클라이언트)
+    const reviews = snap.docs.map(d => ({ id: d.id, ...d.data() }))
+      .sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0))
+      .slice(0, 20);
     const total   = reviews.length;
     const success = reviews.filter(r => r.result === 'success' || r.result === 'partial').length;
     const rate    = total > 0 ? Math.round((success / total) * 100) : null;
