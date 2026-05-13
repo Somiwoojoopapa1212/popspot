@@ -572,6 +572,13 @@
 
       <div class="sheet-divider"></div>
 
+      <!-- 정보 수정 버튼 (로그인 시 표시) -->
+      <div id="sh-edit-bar" class="hidden" style="margin-bottom:10px">
+        <button onclick="openFormForEdit()" style="width:100%;padding:10px;background:#FFF0F3;color:var(--coral);border:1.5px solid #FFD0DB;border-radius:12px;font-family:'Pretendard',sans-serif;font-size:0.85rem;font-weight:700;cursor:pointer">
+          ✏️ 지점 정보 수정
+        </button>
+      </div>
+
       <!-- 후기 목록 -->
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
         <span style="font-weight:800;font-size:0.95rem">📝 후기</span>
@@ -732,7 +739,7 @@ const ADMIN_EMAIL    = 'shuttle1207@gmail.com';
 let map, markerCluster, currentUser = null, allDocs = [], markers = {};
 let currentDocId = null, currentFavorite = false, selectedPlace = null;
 let appInitialized = false, searchTimer = null;
-let reviewPhotos = [], formResult = '', formDiff = '';
+let reviewPhotos = [], formResult = '', formDiff = '', formMode = 'add';
 
 /* ════ 스플래시 타임아웃 ════ */
 const _splashTimeout = setTimeout(() => {
@@ -875,6 +882,8 @@ async function openSheet(docId) {
   document.getElementById('bottom-sheet').classList.add('open');
   document.getElementById('bottom-sheet-body').scrollTop = 0;
 
+  // 수정 버튼 (로그인 사용자만)
+  document.getElementById('sh-edit-bar').classList.toggle('hidden', !currentUser);
   loadFavoriteStatus();
   loadReviews(docId);
 }
@@ -1216,23 +1225,59 @@ function openFormForAdd() {
 
 function closeForm() { document.getElementById('form-overlay').classList.remove('open'); }
 
+function openFormForEdit() {
+  if (!currentUser) { document.getElementById('login-screen').style.display = 'flex'; return; }
+  const doc = allDocs.find(d => d.id === currentDocId);
+  if (!doc) return;
+  formMode = 'edit';
+  selectedPlace = { name: doc.name, address: doc.address, lat: doc.lat, lng: doc.lng, kakaoId: doc.kakaoId || '', phone: doc.phone || '' };
+  document.getElementById('form-title').textContent = '지점 정보 수정';
+  document.getElementById('form-place-name').textContent = doc.name;
+  document.getElementById('form-place-addr').textContent = doc.address;
+  document.getElementById('form-submit-btn').textContent = '수정 저장';
+  // 기존 값 불러오기
+  resetHours();
+  if (doc.hours) {
+    const m = doc.hours.match(/(\d{2}:\d{2})~(\d{2}:\d{2})/);
+    if (m) {
+      document.getElementById('form-hours-open').value  = m[1];
+      document.getElementById('form-hours-close').value = m[2];
+    }
+    const dm = doc.hours.match(/\((.+?) 휴무\)/);
+    if (dm) dm[1].split('·').forEach(d => document.querySelector(`.day-chip[data-day="${d}"]`)?.classList.add('active'));
+    updateHours();
+  }
+  document.getElementById('form-phone').value = doc.phone || '';
+  document.getElementById('form-memo').value  = doc.memo  || '';
+  const fo = document.getElementById('form-overlay');
+  fo.classList.add('open');
+  fo.querySelector('.form-body').scrollTop = 0;
+}
+
 async function submitForm() {
   if (!selectedPlace) return;
   showLoading();
+  const phone = document.getElementById('form-phone').value.trim() || null;
+  const hours = document.getElementById('form-hours').value.trim() || null;
+  const memo  = document.getElementById('form-memo').value.trim() || null;
   try {
-    const existing = allDocs.find(d => d.kakaoId === selectedPlace.kakaoId);
-    if (existing) { showToast('이미 등록된 지점입니다.'); hideLoading(); closeForm(); return; }
-    await db.collection('popspot_locations').add({
-      name: selectedPlace.name, address: selectedPlace.address,
-      lat: selectedPlace.lat, lng: selectedPlace.lng,
-      kakaoId: selectedPlace.kakaoId, phone: document.getElementById('form-phone').value.trim() || null,
-      hours: document.getElementById('form-hours').value.trim() || null,
-      memo: document.getElementById('form-memo').value.trim() || null,
-      addedBy: { uid: currentUser.uid, name: currentUser.displayName || '익명' },
-      addedAt: firebase.firestore.FieldValue.serverTimestamp(),
-    });
-    showToast('✅ 지점이 등록됐습니다!');
+    if (formMode === 'edit') {
+      await db.collection('popspot_locations').doc(currentDocId).update({ phone, hours, memo });
+      showToast('✅ 수정이 완료됐습니다!');
+    } else {
+      const existing = allDocs.find(d => d.kakaoId === selectedPlace.kakaoId);
+      if (existing) { showToast('이미 등록된 지점입니다.'); hideLoading(); closeForm(); return; }
+      await db.collection('popspot_locations').add({
+        name: selectedPlace.name, address: selectedPlace.address,
+        lat: selectedPlace.lat, lng: selectedPlace.lng,
+        kakaoId: selectedPlace.kakaoId, phone, hours, memo,
+        addedBy: { uid: currentUser.uid, name: currentUser.displayName || '익명' },
+        addedAt: firebase.firestore.FieldValue.serverTimestamp(),
+      });
+      showToast('✅ 지점이 등록됐습니다!');
+    }
     closeForm();
+    formMode = 'add';
   } catch(e) { showToast('등록 실패: ' + e.message); }
   hideLoading();
 }
