@@ -142,6 +142,8 @@
     .sheet-name { font-size: 1.3rem; font-weight: 800; color: var(--text); margin-bottom: 4px; }
     .sheet-addr { font-size: 0.85rem; color: var(--text2); cursor: pointer; margin-bottom: 12px; }
     .sheet-divider { height: 1px; background: #FFE8ED; margin: 12px 0; }
+    .menu-item { padding: 14px 20px; font-size: 0.92rem; font-weight: 600; color: var(--text); cursor: pointer; }
+    .menu-item:hover { background: var(--bg); }
 
     /* ══ 성공률 배지 ══ */
     .success-rate-bar {
@@ -486,6 +488,11 @@
       .search-item { border-bottom-color: #3A1828; }
       .success-rate-bar { background: #231820; }
       .fav-item { background: #231820; }
+      #menu-drawer { background: #231820 !important; }
+      #menu-drawer [style*="border-bottom"] { border-bottom-color: #3A1828 !important; }
+      #menu-drawer [style*="background:var(--bg)"] { background: #1A1015 !important; }
+      #report-overlay > div { background: #231820 !important; }
+      #report-content { background: #1A1015 !important; color: var(--text) !important; border-color: #5A2838 !important; }
     }
   </style>
 </head>
@@ -504,10 +511,16 @@
 
 <!-- 로그인 -->
 <div id="login-screen">
+  <!-- 카카오 인앱 브라우저 경고 -->
+  <div id="kakao-browser-notice" style="display:none;background:rgba(0,0,0,0.25);border-radius:14px;padding:14px 18px;margin-bottom:20px;width:100%;max-width:300px;text-align:center">
+    <div style="font-size:0.92rem;font-weight:700;color:white;margin-bottom:6px">⚠️ 카카오 인앱 브라우저</div>
+    <div style="font-size:0.8rem;color:rgba(255,255,255,0.85);line-height:1.5">Google 로그인을 사용하려면<br>Safari 또는 Chrome으로 열어주세요</div>
+    <button onclick="openInExternalBrowser()" style="margin-top:10px;padding:8px 18px;background:white;border:none;border-radius:10px;font-family:'Pretendard',sans-serif;font-size:0.82rem;font-weight:700;color:var(--coral);cursor:pointer">외부 브라우저로 열기</button>
+  </div>
   <img src="icons/icon-192.png" style="width:88px;height:88px;border-radius:22px;box-shadow:0 8px 28px rgba(0,0,0,0.25);margin-bottom:12px">
   <div class="login-title">뽑스팟</div>
   <div class="login-sub">인형뽑기 지점 찾기 & 후기 공유</div>
-  <button class="btn-google" onclick="signInGoogle()">
+  <button class="btn-google" id="btn-google-login" onclick="signInGoogle()">
     <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" width="22">
     Google로 로그인
   </button>
@@ -519,6 +532,7 @@
     <button class="btn-email-login" onclick="signInEmail()">로그인</button>
     <button class="btn-email-login" style="background:rgba(255,255,255,0.1)" onclick="signUpEmail()">회원가입</button>
   </div>
+  <button onclick="skipLogin()" style="margin-top:16px;background:none;border:none;color:rgba(255,255,255,0.65);font-family:'Pretendard',sans-serif;font-size:0.82rem;cursor:pointer;text-decoration:underline">로그인 없이 둘러보기</button>
 </div>
 
 <!-- 헤더 -->
@@ -590,11 +604,18 @@
 
       <div class="sheet-divider"></div>
 
-      <!-- 정보 수정 버튼 (로그인 시 표시) -->
-      <div id="sh-edit-bar" class="hidden" style="margin-bottom:10px">
-        <button onclick="openFormForEdit()" style="width:100%;padding:10px;background:#FFF0F3;color:var(--coral);border:1.5px solid #FFD0DB;border-radius:12px;font-family:'Pretendard',sans-serif;font-size:0.85rem;font-weight:700;cursor:pointer">
-          ✏️ 지점 정보 수정
-        </button>
+      <!-- 정보 수정 / 신고 버튼 -->
+      <div style="display:flex;gap:8px;margin-bottom:10px">
+        <div id="sh-edit-bar" class="hidden" style="flex:1">
+          <button onclick="openFormForEdit()" style="width:100%;padding:10px;background:#FFF0F3;color:var(--coral);border:1.5px solid #FFD0DB;border-radius:12px;font-family:'Pretendard',sans-serif;font-size:0.85rem;font-weight:700;cursor:pointer">
+            ✏️ 지점 정보 수정
+          </button>
+        </div>
+        <div id="sh-report-bar" class="hidden" style="flex:none">
+          <button onclick="openReport()" style="padding:10px 16px;background:#FFF5F5;color:#E53935;border:1.5px solid #FFCDD2;border-radius:12px;font-family:'Pretendard',sans-serif;font-size:0.85rem;font-weight:700;cursor:pointer;white-space:nowrap">
+            🚨 신고
+          </button>
+        </div>
       </div>
 
       <!-- 후기 목록 -->
@@ -604,6 +625,61 @@
       </div>
       <div id="sh-reviews"><div style="color:var(--text2);font-size:0.82rem;padding:8px 0">후기를 불러오는 중...</div></div>
     </div>
+  </div>
+</div>
+
+<!-- 메뉴 드로어 -->
+<div id="menu-backdrop" onclick="closeMenu()" style="display:none;position:fixed;inset:0;z-index:3050;background:rgba(0,0,0,0.4)"></div>
+<div id="menu-drawer" style="display:none;position:fixed;top:0;right:0;bottom:0;width:240px;z-index:3060;background:var(--card);box-shadow:-4px 0 24px rgba(0,0,0,0.15);flex-direction:column;padding:24px 0">
+  <div style="padding:0 20px 20px;border-bottom:1px solid #F0F0F0">
+    <div id="menu-user-info" style="display:none">
+      <div id="menu-user-name" style="font-weight:800;font-size:0.95rem;color:var(--text)"></div>
+      <div id="menu-user-email" style="font-size:0.78rem;color:var(--text2);margin-top:2px"></div>
+    </div>
+    <div id="menu-guest-info" style="color:var(--text2);font-size:0.85rem">로그인이 필요합니다</div>
+  </div>
+  <div style="flex:1;overflow-y:auto;padding:12px 0">
+    <div id="menu-admin-item" style="display:none" class="menu-item" onclick="closeMenu();openAdmin()">🛡️ 관리자 패널</div>
+    <div id="menu-fav-item" class="menu-item" onclick="closeMenu();openFavorites()">⭐ 즐겨찾기</div>
+    <div id="menu-logout-item" style="display:none" class="menu-item" onclick="closeMenu();signOut()">🚪 로그아웃</div>
+    <div id="menu-login-item" class="menu-item" onclick="closeMenu();document.getElementById('login-screen').style.display='flex'">🔑 로그인</div>
+  </div>
+</div>
+
+<!-- 신고 오버레이 -->
+<div id="report-overlay" style="display:none;position:fixed;inset:0;z-index:3100;background:rgba(0,0,0,0.5);align-items:flex-end;justify-content:center">
+  <div style="background:var(--card);border-radius:20px 20px 0 0;padding:24px 20px;width:100%;max-width:480px;box-shadow:0 -4px 24px rgba(0,0,0,0.12)">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px">
+      <span style="font-weight:800;font-size:1.05rem;color:var(--text)">🚨 지점 신고</span>
+      <button onclick="closeReport()" style="background:none;border:none;font-size:1.4rem;cursor:pointer;color:var(--text2)">✕</button>
+    </div>
+    <div id="report-place-name" style="font-weight:700;font-size:0.95rem;color:var(--text);background:var(--bg);border-radius:10px;padding:10px 14px;margin-bottom:16px"></div>
+    <div style="margin-bottom:14px">
+      <label style="font-size:0.85rem;font-weight:700;color:var(--text2);display:block;margin-bottom:8px">신고 사유</label>
+      <div id="report-reasons" style="display:flex;flex-direction:column;gap:8px">
+        <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:0.9rem;color:var(--text)"><input type="radio" name="report-reason" value="폐업 또는 이전"> 폐업 또는 이전</label>
+        <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:0.9rem;color:var(--text)"><input type="radio" name="report-reason" value="잘못된 정보"> 잘못된 정보 (주소·전화번호 등)</label>
+        <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:0.9rem;color:var(--text)"><input type="radio" name="report-reason" value="중복 등록"> 중복 등록</label>
+        <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:0.9rem;color:var(--text)"><input type="radio" name="report-reason" value="기타"> 기타</label>
+      </div>
+    </div>
+    <div style="margin-bottom:18px">
+      <label style="font-size:0.85rem;font-weight:700;color:var(--text2);display:block;margin-bottom:6px">추가 내용 <span style="font-weight:400;opacity:0.7">(선택사항)</span></label>
+      <textarea id="report-content" style="width:100%;border:1.5px solid #E0E0E0;border-radius:10px;padding:10px;font-size:0.88rem;font-family:'Pretendard',sans-serif;color:var(--text);background:var(--bg);resize:none;height:72px;box-sizing:border-box" placeholder="자세한 내용을 입력해주세요..."></textarea>
+    </div>
+    <button onclick="submitReport()" style="width:100%;padding:13px;background:#E53935;color:white;border:none;border-radius:14px;font-family:'Pretendard',sans-serif;font-size:0.95rem;font-weight:800;cursor:pointer">신고하기</button>
+  </div>
+</div>
+
+<!-- 관리자 오버레이 -->
+<div id="admin-overlay" style="display:none;position:fixed;inset:0;z-index:3200;background:var(--bg);flex-direction:column">
+  <div style="background:var(--card);padding:14px 16px;display:flex;align-items:center;gap:12px;border-bottom:1px solid #E0E0E0;flex-shrink:0">
+    <button onclick="closeAdmin()" style="background:none;border:none;font-size:1.3rem;cursor:pointer;color:var(--text2)">←</button>
+    <span style="font-weight:800;font-size:1rem;color:var(--text)">🛡️ 관리자 패널</span>
+  </div>
+  <div id="admin-body" style="flex:1;overflow-y:auto;padding:16px">
+    <div style="font-weight:800;font-size:0.9rem;color:var(--text);margin-bottom:12px">신고 목록</div>
+    <div id="admin-reports-list"><div style="color:var(--text2);font-size:0.85rem">불러오는 중...</div></div>
   </div>
 </div>
 
@@ -630,6 +706,10 @@
     <div class="form-place-card" id="form-place-card">
       <div id="form-place-name" class="form-place-name">-</div>
       <div id="form-place-addr" class="form-place-addr">-</div>
+      <div id="form-name-edit-row" style="display:none;margin-top:10px">
+        <label class="form-label" style="margin-bottom:4px">지점 이름 <span style="font-size:0.75rem;color:var(--coral)">*</span></label>
+        <input type="text" id="form-name-input" class="form-input" placeholder="지점 이름을 입력해주세요" style="margin-top:0">
+      </div>
     </div>
     <div class="form-section">
       <label class="form-label">영업시간 <span style="font-size:0.75rem;opacity:0.7">(선택사항)</span></label>
@@ -787,6 +867,27 @@ auth.onAuthStateChanged(user => {
   } else if (user) { showApp(user); }
 });
 
+/* ════ 카카오 인앱 브라우저 감지 ════ */
+(function detectKakaoBrowser() {
+  const ua = navigator.userAgent;
+  const isKakao = /KAKAOTALK/i.test(ua);
+  const notice = document.getElementById('kakao-browser-notice');
+  const googleBtn = document.getElementById('btn-google-login');
+  if (isKakao && notice) {
+    notice.style.display = 'block';
+    if (googleBtn) googleBtn.style.opacity = '0.5';
+  }
+})();
+
+function openInExternalBrowser() {
+  const url = location.href;
+  location.href = 'kakaotalk://web/openExternal?url=' + encodeURIComponent(url);
+}
+
+function skipLogin() {
+  showApp(null);
+}
+
 function showApp(user) {
   document.getElementById('login-screen').style.display = 'none';
   ['header','filter-bar','map','speed-dial'].forEach(id => {
@@ -820,6 +921,100 @@ function signOut() { if (confirm('로그아웃 하시겠어요?')) auth.signOut(
 function showLoginError(msg) {
   const el = document.getElementById('login-error-msg');
   if (el) el.textContent = msg;
+}
+
+/* ════ 신고 기능 ════ */
+function openReport() {
+  if (!currentUser) { document.getElementById('login-screen').style.display = 'flex'; return; }
+  const doc = allDocs.find(d => d.id === currentDocId);
+  if (!doc) return;
+  document.getElementById('report-place-name').textContent = doc.name;
+  document.querySelectorAll('input[name="report-reason"]').forEach(r => r.checked = false);
+  document.getElementById('report-content').value = '';
+  const ov = document.getElementById('report-overlay');
+  ov.style.display = 'flex';
+}
+
+function closeReport() {
+  document.getElementById('report-overlay').style.display = 'none';
+}
+
+async function submitReport() {
+  const reason = document.querySelector('input[name="report-reason"]:checked')?.value;
+  if (!reason) { showToast('신고 사유를 선택해주세요.'); return; }
+  const content = document.getElementById('report-content').value.trim() || null;
+  const doc = allDocs.find(d => d.id === currentDocId);
+  try {
+    await db.collection('popspot_reports').add({
+      locationId: currentDocId,
+      locationName: doc?.name || '',
+      reason, content,
+      uid: currentUser.uid,
+      userName: currentUser.displayName || '익명',
+      createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+      status: 'pending',
+    });
+    closeReport();
+    showToast('✅ 신고가 접수됐습니다. 검토 후 처리됩니다.');
+  } catch(e) { showToast('신고 실패: ' + e.message); }
+}
+
+/* ════ 관리자 패널 ════ */
+function openAdmin() {
+  if (!currentUser || currentUser.email !== ADMIN_EMAIL) { showToast('관리자만 접근 가능합니다.'); return; }
+  const ov = document.getElementById('admin-overlay');
+  ov.style.display = 'flex';
+  loadAdminReports();
+}
+
+function closeAdmin() {
+  document.getElementById('admin-overlay').style.display = 'none';
+}
+
+async function loadAdminReports() {
+  const list = document.getElementById('admin-reports-list');
+  list.innerHTML = '<div style="color:var(--text2);font-size:0.85rem">불러오는 중...</div>';
+  try {
+    const snap = await db.collection('popspot_reports').orderBy('createdAt','desc').limit(50).get();
+    if (snap.empty) { list.innerHTML = '<div style="color:var(--text2);font-size:0.85rem">신고 내역이 없습니다.</div>'; return; }
+    list.innerHTML = '';
+    snap.forEach(doc => {
+      const d = doc.data();
+      const ts = d.createdAt?.toDate?.()?.toLocaleDateString('ko') || '';
+      const card = document.createElement('div');
+      card.style.cssText = 'background:var(--card);border-radius:12px;padding:14px;margin-bottom:10px;box-shadow:0 2px 8px rgba(0,0,0,0.07)';
+      card.innerHTML = `
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+          <span style="font-weight:700;font-size:0.9rem;color:var(--text)">${d.locationName}</span>
+          <span style="font-size:0.75rem;color:var(--text2)">${ts}</span>
+        </div>
+        <div style="font-size:0.82rem;color:#E53935;font-weight:700;margin-bottom:4px">${d.reason}</div>
+        ${d.content ? `<div style="font-size:0.8rem;color:var(--text2);margin-bottom:8px">${d.content}</div>` : ''}
+        <div style="display:flex;gap:8px;margin-top:8px">
+          <button onclick="adminDeleteLocation('${d.locationId}','${doc.id}')" style="padding:6px 14px;background:#FFEBEE;color:#E53935;border:1.5px solid #FFCDD2;border-radius:8px;font-family:'Pretendard',sans-serif;font-size:0.8rem;font-weight:700;cursor:pointer">지점 삭제</button>
+          <button onclick="adminDismissReport('${doc.id}')" style="padding:6px 14px;background:#F5F5F5;color:var(--text2);border:1px solid #E0E0E0;border-radius:8px;font-family:'Pretendard',sans-serif;font-size:0.8rem;cursor:pointer">무시</button>
+        </div>`;
+      list.appendChild(card);
+    });
+  } catch(e) { list.innerHTML = `<div style="color:#E53935;font-size:0.85rem">불러오기 실패: ${e.message}</div>`; }
+}
+
+async function adminDeleteLocation(locationId, reportId) {
+  if (!confirm('이 지점을 삭제하시겠어요?')) return;
+  try {
+    await db.collection('popspot_locations').doc(locationId).delete();
+    await db.collection('popspot_reports').doc(reportId).update({ status: 'resolved' });
+    showToast('✅ 지점이 삭제됐습니다.');
+    loadAdminReports();
+  } catch(e) { showToast('삭제 실패: ' + e.message); }
+}
+
+async function adminDismissReport(reportId) {
+  try {
+    await db.collection('popspot_reports').doc(reportId).update({ status: 'dismissed' });
+    showToast('신고를 무시했습니다.');
+    loadAdminReports();
+  } catch(e) { showToast('처리 실패: ' + e.message); }
 }
 
 /* ════ 지도 ════ */
@@ -904,8 +1099,9 @@ async function openSheet(docId) {
   document.getElementById('bottom-sheet').classList.add('open');
   document.getElementById('bottom-sheet-body').scrollTop = 0;
 
-  // 수정 버튼 (로그인 사용자만)
+  // 수정·신고 버튼 (로그인 사용자만)
   document.getElementById('sh-edit-bar').classList.toggle('hidden', !currentUser);
+  document.getElementById('sh-report-bar').classList.toggle('hidden', !currentUser);
   loadFavoriteStatus();
   loadReviews(docId);
 }
@@ -1218,13 +1414,10 @@ function selectForAddDirect(idx) {
 function selectForAdd(idx) {
   const r = window._searchResults.data[idx];
   const address = r.road_address_name || r.address_name;
-  // 주소 탭으로 검색된 경우 지점명 직접 입력 받기
   if (searchTab === 'address') {
-    const name = prompt(`📍 ${address}\n\n지점 이름을 입력해주세요:`);
-    if (!name || !name.trim()) return;
-    selectedPlace = { name: name.trim(), address, lat: parseFloat(r.y), lng: parseFloat(r.x), kakaoId: null, phone: '', category: '' };
+    selectedPlace = { name: address, address, lat: parseFloat(r.y), lng: parseFloat(r.x), kakaoId: null, phone: '', category: '', needNameInput: true };
   } else {
-    selectedPlace = { name: r.place_name, address, lat: parseFloat(r.y), lng: parseFloat(r.x), kakaoId: r.id, phone: r.phone || '', category: r.category_name || '' };
+    selectedPlace = { name: r.place_name, address, lat: parseFloat(r.y), lng: parseFloat(r.x), kakaoId: r.id, phone: r.phone || '', category: r.category_name || '', needNameInput: false };
   }
   closeSearch();
   openFormForAdd();
@@ -1287,6 +1480,16 @@ function openFormForAdd() {
   document.getElementById('form-place-addr').textContent = selectedPlace.address;
   document.getElementById('form-submit-btn').textContent = '등록하기';
   resetHours();
+  const nameEditRow = document.getElementById('form-name-edit-row');
+  const nameInput = document.getElementById('form-name-input');
+  if (selectedPlace.needNameInput) {
+    nameEditRow.style.display = 'block';
+    nameInput.value = '';
+    setTimeout(() => nameInput.focus(), 300);
+  } else {
+    nameEditRow.style.display = 'none';
+    nameInput.value = '';
+  }
   if (selectedPlace.phone) {
     document.getElementById('form-phone').value = selectedPlace.phone;
     setTimeout(() => showToast('📞 전화번호가 자동 입력됐습니다'), 400);
@@ -1332,21 +1535,26 @@ function openFormForEdit() {
 
 async function submitForm() {
   if (!selectedPlace) return;
-  showLoading();
   const phone = document.getElementById('form-phone').value.trim() || null;
   const hours = document.getElementById('form-hours').value.trim() || null;
   const memo  = document.getElementById('form-memo').value.trim() || null;
+  if (formMode !== 'edit' && selectedPlace.needNameInput) {
+    const nameInput = document.getElementById('form-name-input').value.trim();
+    if (!nameInput) { showToast('지점 이름을 입력해주세요.'); document.getElementById('form-name-input').focus(); return; }
+    selectedPlace.name = nameInput;
+  }
+  showLoading();
   try {
     if (formMode === 'edit') {
       await db.collection('popspot_locations').doc(currentDocId).update({ phone, hours, memo });
       showToast('✅ 수정이 완료됐습니다!');
     } else {
-      const existing = allDocs.find(d => d.kakaoId === selectedPlace.kakaoId);
+      const existing = allDocs.find(d => d.kakaoId && d.kakaoId === selectedPlace.kakaoId);
       if (existing) { showToast('이미 등록된 지점입니다.'); hideLoading(); closeForm(); return; }
       await db.collection('popspot_locations').add({
         name: selectedPlace.name, address: selectedPlace.address,
         lat: selectedPlace.lat, lng: selectedPlace.lng,
-        kakaoId: selectedPlace.kakaoId, phone, hours, memo,
+        kakaoId: selectedPlace.kakaoId || null, phone, hours, memo,
         addedBy: { uid: currentUser.uid, name: currentUser.displayName || '익명' },
         addedAt: firebase.firestore.FieldValue.serverTimestamp(),
       });
@@ -1440,8 +1648,39 @@ function goToPlace(id) {
 }
 
 /* ════ 메뉴 ════ */
-function openMenu() { /* 향후 확장 */ }
-function closeMenu() {}
+function openMenu() {
+  const backdrop = document.getElementById('menu-backdrop');
+  const drawer   = document.getElementById('menu-drawer');
+  backdrop.style.display = 'block';
+  drawer.style.display   = 'flex';
+  // 사용자 정보 업데이트
+  const userInfo  = document.getElementById('menu-user-info');
+  const guestInfo = document.getElementById('menu-guest-info');
+  const userName  = document.getElementById('menu-user-name');
+  const userEmail = document.getElementById('menu-user-email');
+  const adminItem  = document.getElementById('menu-admin-item');
+  const logoutItem = document.getElementById('menu-logout-item');
+  const loginItem  = document.getElementById('menu-login-item');
+  if (currentUser) {
+    userInfo.style.display  = 'block';
+    guestInfo.style.display = 'none';
+    userName.textContent    = currentUser.displayName || '사용자';
+    userEmail.textContent   = currentUser.email || '';
+    logoutItem.style.display = 'block';
+    loginItem.style.display  = 'none';
+    adminItem.style.display  = currentUser.email === ADMIN_EMAIL ? 'block' : 'none';
+  } else {
+    userInfo.style.display  = 'none';
+    guestInfo.style.display = 'block';
+    logoutItem.style.display = 'none';
+    loginItem.style.display  = 'block';
+    adminItem.style.display  = 'none';
+  }
+}
+function closeMenu() {
+  document.getElementById('menu-backdrop').style.display = 'none';
+  document.getElementById('menu-drawer').style.display   = 'none';
+}
 
 /* ════ 지역 필터 ════ */
 function openAreaFilter() { /* 향후 확장 */ }
@@ -1474,22 +1713,27 @@ function showToast(msg) {
 function showLoading() { document.getElementById('loading').classList.remove('hidden'); }
 function hideLoading() { document.getElementById('loading').classList.add('hidden'); }
 
-/* ════ 바텀시트 스와이프 (헤더 핸들에서만) ════ */
+/* ════ 바텀시트 스와이프 (시트 전체에서 감지, 헤더에서 시작한 경우만 처리) ════ */
 (function() {
-  const sheet  = document.getElementById('bottom-sheet');
-  const header = document.getElementById('sheet-header');
-  let startY = 0, dragging = false;
-  header.addEventListener('touchstart', e => {
-    startY = e.touches[0].clientY; dragging = false;
+  const sheet = document.getElementById('bottom-sheet');
+  const HEADER_H = 56;
+  let startY = 0, dragging = false, fromHeader = false;
+  sheet.addEventListener('touchstart', e => {
+    const rect = sheet.getBoundingClientRect();
+    fromHeader = (e.touches[0].clientY - rect.top) < HEADER_H;
+    startY = e.touches[0].clientY;
+    dragging = false;
   }, { passive: true });
-  header.addEventListener('touchmove', e => {
+  sheet.addEventListener('touchmove', e => {
+    if (!fromHeader) return;
     const dy = e.touches[0].clientY - startY;
     if (dy <= 0) return;
     dragging = true;
     sheet.style.transition = 'none';
     sheet.style.transform = `translateY(${dy}px)`;
   }, { passive: true });
-  header.addEventListener('touchend', e => {
+  sheet.addEventListener('touchend', e => {
+    if (!fromHeader) return;
     const dy = e.changedTouches[0].clientY - startY;
     if (dragging && dy > 60) {
       sheet.style.transition = '';
@@ -1499,7 +1743,13 @@ function hideLoading() { document.getElementById('loading').classList.add('hidde
       sheet.style.transform = '';
       setTimeout(() => { sheet.style.transition = ''; }, 260);
     }
-    dragging = false;
+    dragging = false; fromHeader = false;
+  });
+  sheet.addEventListener('touchcancel', () => {
+    sheet.style.transition = 'transform 0.25s cubic-bezier(0.4,0,0.2,1)';
+    sheet.style.transform = '';
+    setTimeout(() => { sheet.style.transition = ''; }, 260);
+    dragging = false; fromHeader = false;
   });
 })();
 
@@ -1509,6 +1759,9 @@ function hideLoading() { document.getElementById('loading').classList.add('hidde
   let exitReady = false, exitTimer = null, skipping = false;
   function isOpen(id) { const el = document.getElementById(id); return el && (el.classList.contains('open') || el.style.display === 'flex'); }
   function tryCloseUI() {
+    if (isOpen('admin-overlay'))     { closeAdmin();     return true; }
+    if (isOpen('report-overlay'))    { closeReport();    return true; }
+    if (isOpen('menu-drawer'))       { closeMenu();      return true; }
     if (isOpen('form-overlay'))      { closeForm();      return true; }
     if (isOpen('review-overlay'))    { closeReview();    return true; }
     if (isOpen('favorites-overlay')) { closeFavorites(); return true; }
