@@ -1,0 +1,1324 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>뽑스팟 | 인형뽑기 지점 지도</title>
+
+  <meta name="description" content="내 주변 인형뽑기 지점을 찾고, 실제 후기와 성공률을 확인하세요. 투자 대비 어떤 인형을 뽑았는지 공유하는 뽑기 지도 앱입니다.">
+  <meta name="keywords" content="인형뽑기, 뽑기방, 크레인게임, 뽑기 후기, 인형뽑기 지도, 뽑스팟">
+  <meta name="robots" content="index, follow">
+  <link rel="canonical" href="https://somiwoojoopapa1212.github.io/popspot/">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="뽑스팟">
+  <meta property="og:title" content="뽑스팟 | 인형뽑기 지점 지도">
+  <meta property="og:description" content="내 주변 인형뽑기 지점을 찾고 실제 후기를 확인하세요.">
+  <meta property="og:url" content="https://somiwoojoopapa1212.github.io/popspot/">
+  <meta property="og:locale" content="ko_KR">
+  <meta name="theme-color" content="#FF6B8A">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="뽑스팟">
+  <link rel="manifest" href="manifest.json">
+
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css">
+
+  <style>
+    :root {
+      --coral:   #FF6B8A;
+      --coral2:  #FF8FA6;
+      --mint:    #6EE7D8;
+      --mint2:   #A8F0E8;
+      --bg:      #FFF8F2;
+      --white:   #FFFFFF;
+      --card:    #FFFFFF;
+      --text:    #263238;
+      --text2:   #7A7A7A;
+      --yellow:  #FFD166;
+      --shadow:  rgba(255,107,138,0.15);
+      --success: #4CAF50;
+      --fail:    #F44336;
+      --partial: #FF9800;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+    body { font-family: 'Pretendard', sans-serif; background: var(--bg); color: var(--text); height: 100vh; overflow: hidden; }
+
+    /* ══ 헤더 ══ */
+    #header {
+      position: fixed; top: 0; left: 0; right: 0; z-index: 1000;
+      background: var(--coral); padding: 0 16px;
+      display: flex; align-items: center; height: 56px; gap: 10px;
+      box-shadow: 0 2px 12px rgba(255,107,138,0.3);
+    }
+    .header-title {
+      font-weight: 800; color: white; font-size: 1.15rem;
+      cursor: pointer; flex-shrink: 0; letter-spacing: -0.3px;
+    }
+    .search-bar {
+      flex: 1; min-width: 0; display: flex; align-items: center;
+      background: rgba(255,255,255,0.2); border-radius: 10px;
+      padding: 7px 10px; gap: 6px; cursor: pointer; overflow: hidden;
+    }
+    .search-bar .search-placeholder { color: rgba(255,255,255,0.85); font-size: 0.85rem; }
+    .hamburger-btn {
+      width: 36px; height: 36px; border-radius: 10px; border: none;
+      background: rgba(255,255,255,0.2); color: white; font-size: 1.1rem;
+      cursor: pointer; display: flex; align-items: center; justify-content: center;
+      position: relative;
+    }
+
+    /* ══ 필터 바 ══ */
+    #filter-bar {
+      position: fixed; top: 56px; left: 0; right: 0; z-index: 999;
+      background: var(--white); padding: 10px 16px;
+      display: flex; gap: 8px; overflow-x: auto;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+      scrollbar-width: none;
+    }
+    #filter-bar::-webkit-scrollbar { display: none; }
+    .filter-btn {
+      display: flex; align-items: center; gap: 6px; white-space: nowrap;
+      border: 1.5px solid #FFD0DB; border-radius: 20px; padding: 7px 14px;
+      font-size: 0.83rem; cursor: pointer; background: white; color: var(--text);
+      font-family: 'Pretendard', sans-serif; transition: all 0.15s; flex-shrink: 0;
+    }
+    .filter-btn .f-arrow { font-size: 0.6rem; opacity: 0.6; }
+    .filter-btn.active { border-color: var(--coral); background: var(--coral); color: white; }
+
+    /* ══ 지도 ══ */
+    #map { position: fixed; top: 104px; left: 0; right: 0; bottom: 0; z-index: 1; }
+
+    /* ══ 로딩 ══ */
+    #loading {
+      position: fixed; inset: 0; z-index: 9999;
+      background: rgba(255,248,242,0.85);
+      display: flex; align-items: center; justify-content: center;
+    }
+    #loading.hidden { display: none; }
+    .loading-spinner {
+      width: 40px; height: 40px; border-radius: 50%;
+      border: 4px solid #FFD0DB; border-top-color: var(--coral);
+      animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ══ 바텀시트 (지점 상세) ══ */
+    #bottom-sheet {
+      position: fixed; left: 0; right: 0; bottom: 0; z-index: 800;
+      background: var(--card); border-radius: 24px 24px 0 0;
+      box-shadow: 0 -4px 30px rgba(255,107,138,0.15);
+      transform: translateY(100%); transition: transform 0.35s cubic-bezier(0.4,0,0.2,1);
+      display: flex; flex-direction: column; max-height: 75vh;
+    }
+    #bottom-sheet.open { transform: translateY(0); }
+    #sheet-header {
+      flex-shrink: 0; position: relative; padding: 0 16px;
+      display: flex; align-items: center; justify-content: flex-end; gap: 8px;
+      min-height: 48px;
+    }
+    #sheet-header .sheet-handle {
+      position: absolute; left: 50%; transform: translateX(-50%); top: 10px;
+      width: 40px; height: 4px; background: #FFD0DB; border-radius: 2px; margin: 0;
+    }
+    #bottom-sheet-body { flex: 1; overflow-y: auto; min-height: 0; }
+
+    .btn-fav-sheet, .btn-share-sheet, .btn-close-sheet {
+      background: #FFF0F3; border: none; border-radius: 50%;
+      width: 30px; height: 30px; cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      color: var(--coral); flex-shrink: 0; transition: all 0.15s;
+    }
+    .btn-fav-sheet { opacity: 0.55; }
+    .btn-fav-sheet.active { opacity: 1; filter: drop-shadow(0 0 5px rgba(255,209,102,0.7)); }
+
+    .sheet-content { padding: 0 20px 32px; }
+    .sheet-name { font-size: 1.3rem; font-weight: 800; color: var(--text); margin-bottom: 4px; }
+    .sheet-addr { font-size: 0.85rem; color: var(--text2); cursor: pointer; margin-bottom: 12px; }
+    .sheet-divider { height: 1px; background: #FFE8ED; margin: 12px 0; }
+
+    /* ══ 성공률 배지 ══ */
+    .success-rate-bar {
+      background: #FFF0F3; border-radius: 12px; padding: 12px 16px;
+      margin-bottom: 14px;
+    }
+    .success-rate-title { font-size: 0.78rem; color: var(--text2); margin-bottom: 6px; font-weight: 600; }
+    .rate-row { display: flex; align-items: center; gap: 8px; }
+    .rate-track { flex: 1; height: 8px; background: #FFD0DB; border-radius: 4px; overflow: hidden; }
+    .rate-fill { height: 100%; background: linear-gradient(90deg, var(--coral), var(--yellow)); border-radius: 4px; transition: width 0.6s; }
+    .rate-text { font-size: 0.9rem; font-weight: 800; color: var(--coral); min-width: 40px; text-align: right; }
+
+    /* ══ 후기 카드 ══ */
+    .review-card {
+      background: #FFF8F2; border-radius: 14px;
+      padding: 14px; margin-bottom: 10px;
+      border: 1px solid #FFE8ED;
+    }
+    .review-header { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+    .review-avatar { width: 30px; height: 30px; border-radius: 50%; background: var(--coral); display: flex; align-items: center; justify-content: center; color: white; font-size: 0.8rem; font-weight: 700; flex-shrink: 0; overflow: hidden; }
+    .review-avatar img { width: 100%; height: 100%; object-fit: cover; }
+    .review-meta { flex: 1; }
+    .review-name { font-size: 0.85rem; font-weight: 700; color: var(--text); }
+    .review-date { font-size: 0.72rem; color: var(--text2); }
+    .result-badge {
+      padding: 3px 10px; border-radius: 20px; font-size: 0.75rem; font-weight: 700;
+    }
+    .result-badge.success { background: #E8F5E9; color: var(--success); }
+    .result-badge.fail    { background: #FFEBEE; color: var(--fail); }
+    .result-badge.partial { background: #FFF3E0; color: var(--partial); }
+
+    .review-invest {
+      display: inline-flex; align-items: center; gap: 4px;
+      background: #FFF0F3; border-radius: 8px; padding: 4px 10px;
+      font-size: 0.8rem; color: var(--coral); font-weight: 700; margin-bottom: 6px;
+    }
+    .review-prize {
+      font-size: 0.88rem; color: var(--text); margin-bottom: 6px; font-weight: 600;
+    }
+    .review-content { font-size: 0.82rem; color: var(--text2); line-height: 1.55; }
+    .review-photos { display: flex; gap: 6px; margin-top: 8px; flex-wrap: wrap; }
+    .review-photo { width: 72px; height: 72px; border-radius: 10px; object-fit: cover; cursor: pointer; }
+    .difficulty-badge {
+      display: inline-block; padding: 2px 8px; border-radius: 10px;
+      font-size: 0.72rem; font-weight: 700; margin-top: 4px;
+    }
+    .diff-easy   { background: #E8F5E9; color: var(--success); }
+    .diff-normal { background: #FFF3E0; color: var(--partial); }
+    .diff-hard   { background: #FFEBEE; color: var(--fail); }
+
+    /* ══ 후기 작성 버튼 ══ */
+    .btn-write-review {
+      display: flex; align-items: center; gap: 6px;
+      background: var(--coral); color: white; border: none; border-radius: 12px;
+      padding: 10px 16px; font-family: 'Pretendard', sans-serif;
+      font-size: 0.88rem; font-weight: 700; cursor: pointer; width: 100%;
+      justify-content: center; margin-top: 4px;
+    }
+
+    /* ══ 연락 바 ══ */
+    .contact-bar { display: flex; gap: 8px; margin: 10px 0; }
+    .btn-call, .btn-reserve {
+      flex: 1; padding: 10px; border-radius: 12px; border: none;
+      font-family: 'Pretendard', sans-serif; font-size: 0.85rem;
+      font-weight: 600; cursor: pointer; display: flex; align-items: center;
+      justify-content: center; gap: 6px;
+    }
+    .btn-call    { background: #E8F5E9; color: #388E3C; }
+    .btn-reserve { background: #E3F2FD; color: #1565C0; }
+
+    /* ══ 후기 작성 오버레이 ══ */
+    #review-overlay {
+      position: fixed; inset: 0; z-index: 2200;
+      background: var(--bg); display: flex; flex-direction: column;
+      transform: translateY(100%); transition: transform 0.3s cubic-bezier(0.4,0,0.2,1);
+    }
+    #review-overlay.open { transform: translateY(0); }
+    .form-header {
+      background: var(--coral); color: white; padding: 14px 16px;
+      display: flex; align-items: center; gap: 12px;
+      box-shadow: 0 2px 8px rgba(255,107,138,0.3);
+    }
+    .form-back { background: rgba(255,255,255,0.2); border: none; color: white; border-radius: 8px; padding: 6px 12px; font-size: 1rem; cursor: pointer; }
+    .form-header h2 { font-size: 1.05rem; font-weight: 800; flex: 1; }
+    .form-body { flex: 1; overflow-y: auto; padding: 20px 16px 40px; }
+    .form-section { margin-bottom: 20px; }
+    .form-label { font-size: 0.85rem; color: var(--text2); margin-bottom: 8px; display: block; font-weight: 600; }
+    .form-input {
+      width: 100%; padding: 12px 14px; border: 1.5px solid #FFD0DB;
+      border-radius: 12px; font-family: 'Pretendard', sans-serif;
+      font-size: 0.92rem; color: var(--text); background: white; outline: none;
+    }
+    .form-input:focus { border-color: var(--coral); }
+    .form-textarea {
+      width: 100%; padding: 12px 14px; border: 1.5px solid #FFD0DB;
+      border-radius: 12px; font-family: 'Pretendard', sans-serif;
+      font-size: 0.92rem; color: var(--text); background: white;
+      min-height: 80px; resize: none; outline: none;
+    }
+    .form-textarea:focus { border-color: var(--coral); }
+
+    /* 결과 선택 */
+    .result-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 8px; }
+    .result-opt {
+      border: 1.5px solid #FFD0DB; border-radius: 12px; padding: 12px 6px;
+      text-align: center; cursor: pointer; font-size: 0.82rem; color: var(--text2);
+      transition: all 0.15s; background: white;
+    }
+    .result-opt .r-icon { font-size: 1.4rem; display: block; margin-bottom: 4px; }
+    .result-opt.active.success-opt { background: #E8F5E9; border-color: var(--success); color: var(--success); font-weight: 700; }
+    .result-opt.active.fail-opt    { background: #FFEBEE; border-color: var(--fail);    color: var(--fail);    font-weight: 700; }
+    .result-opt.active.partial-opt { background: #FFF3E0; border-color: var(--partial); color: var(--partial); font-weight: 700; }
+
+    /* 난이도 선택 */
+    .diff-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 8px; }
+    .diff-opt {
+      border: 1.5px solid #FFD0DB; border-radius: 12px; padding: 10px 6px;
+      text-align: center; cursor: pointer; font-size: 0.82rem; color: var(--text2);
+      transition: all 0.15s; background: white;
+    }
+    .diff-opt.active.easy   { background: #E8F5E9; border-color: var(--success); color: var(--success); font-weight: 700; }
+    .diff-opt.active.normal { background: #FFF3E0; border-color: var(--partial); color: var(--partial); font-weight: 700; }
+    .diff-opt.active.hard   { background: #FFEBEE; border-color: var(--fail);    color: var(--fail);    font-weight: 700; }
+
+    /* 투자금액 */
+    .invest-input-wrap { display: flex; align-items: center; gap: 8px; }
+    .invest-unit { color: var(--text2); font-size: 0.9rem; flex-shrink: 0; }
+
+    /* 사진 업로드 */
+    .photo-grid { display: flex; gap: 8px; flex-wrap: wrap; }
+    .photo-thumb { width: 80px; height: 80px; border-radius: 12px; object-fit: cover; position: relative; }
+    .btn-add-photo {
+      width: 80px; height: 80px; border-radius: 12px; border: 2px dashed #FFD0DB;
+      background: #FFF0F3; display: flex; flex-direction: column;
+      align-items: center; justify-content: center; cursor: pointer;
+      color: var(--coral); font-size: 0.7rem; gap: 4px;
+    }
+
+    .btn-submit {
+      width: 100%; padding: 14px; background: var(--coral); color: white;
+      border: none; border-radius: 14px; font-family: 'Pretendard', sans-serif;
+      font-size: 1rem; font-weight: 800; cursor: pointer; margin-top: 8px;
+    }
+
+    /* ══ 지점 추가 오버레이 ══ */
+    #form-overlay {
+      position: fixed; inset: 0; z-index: 2100;
+      background: var(--bg); display: flex; flex-direction: column;
+      transform: translateY(100%); transition: transform 0.3s cubic-bezier(0.4,0,0.2,1);
+    }
+    #form-overlay.open { transform: translateY(0); }
+
+    /* ══ 검색 오버레이 ══ */
+    #search-overlay {
+      position: fixed; inset: 0; z-index: 1500;
+      background: var(--white); display: flex; flex-direction: column;
+      transform: translateY(-100%); transition: transform 0.3s cubic-bezier(0.4,0,0.2,1);
+    }
+    #search-overlay.open { transform: translateY(0); }
+    .search-overlay-header {
+      background: var(--coral); padding: 12px 16px; display: flex; gap: 10px; align-items: center;
+    }
+    .search-input {
+      flex: 1; padding: 10px 14px; border-radius: 10px; border: none;
+      font-family: 'Pretendard', sans-serif; font-size: 0.92rem; outline: none;
+    }
+    .btn-cancel { color: white; background: none; border: none; font-size: 0.9rem; cursor: pointer; white-space: nowrap; }
+    #search-results { flex: 1; overflow-y: auto; padding: 8px 0; }
+    .search-item { padding: 14px 20px; border-bottom: 1px solid #FFE8ED; cursor: pointer; }
+    .search-item:active { background: #FFF0F3; }
+    .search-item-name { font-size: 0.95rem; font-weight: 700; color: var(--text); }
+    .search-item-addr { font-size: 0.8rem; color: var(--text2); margin-top: 2px; }
+    .search-empty { padding: 20px; text-align: center; color: var(--text2); font-size: 0.88rem; }
+
+    /* ══ Speed Dial ══ */
+    #speed-dial {
+      position: fixed; bottom: 28px; right: 20px; z-index: 499;
+      display: flex; flex-direction: column; align-items: flex-end; gap: 14px;
+      pointer-events: none;
+    }
+    #sd-backdrop { display: none; position: fixed; inset: 0; z-index: 498; }
+    #sd-backdrop.open { display: block; }
+    #sd-trigger {
+      width: 58px; height: 58px; border-radius: 50%;
+      background: linear-gradient(135deg, var(--coral), var(--coral2));
+      border: none; color: white; font-size: 1.8rem; cursor: pointer;
+      box-shadow: 0 4px 20px rgba(255,107,138,0.4);
+      display: flex; align-items: center; justify-content: center;
+      transition: transform 0.25s; flex-shrink: 0; pointer-events: auto;
+    }
+    #speed-dial.open #sd-trigger { transform: rotate(45deg); }
+    #sd-items {
+      display: flex; flex-direction: column; align-items: flex-end; gap: 10px;
+      opacity: 0; pointer-events: none;
+      transform: translateY(12px); transition: opacity 0.2s, transform 0.2s;
+    }
+    #speed-dial.open #sd-items { opacity: 1; pointer-events: auto; transform: translateY(0); }
+    .sd-item { display: flex; align-items: center; gap: 10px; }
+    .sd-label {
+      background: rgba(30,20,40,0.82); color: white; backdrop-filter: blur(4px);
+      padding: 5px 12px; border-radius: 8px; font-size: 0.8rem; white-space: nowrap;
+    }
+    .sd-btn {
+      width: 46px; height: 46px; border-radius: 50%; border: none;
+      background: white; box-shadow: 0 2px 12px rgba(255,107,138,0.25);
+      font-size: 1.3rem; cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      transition: transform 0.15s; flex-shrink: 0; pointer-events: auto;
+    }
+    .sd-btn:active { transform: scale(0.92); }
+
+    /* ══ 로그인 화면 ══ */
+    #login-screen {
+      position: fixed; inset: 0; z-index: 5000;
+      background: linear-gradient(160deg, var(--coral) 0%, #FF3D6B 100%);
+      display: none; flex-direction: column; align-items: center; justify-content: center; padding: 32px;
+    }
+    .login-logo { margin-bottom: 12px; font-size: 4rem; }
+    .login-title { font-size: 2rem; font-weight: 900; color: white; margin-bottom: 6px; }
+    .login-sub { font-size: 0.9rem; color: rgba(255,255,255,0.8); margin-bottom: 40px; text-align: center; }
+    .btn-google {
+      display: flex; align-items: center; gap: 12px; width: 100%; max-width: 300px;
+      background: white; border: none; border-radius: 14px; padding: 14px 20px;
+      font-family: 'Pretendard', sans-serif; font-size: 1rem; font-weight: 700;
+      color: var(--text); cursor: pointer; margin-bottom: 12px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+    }
+    .email-login-box { display: flex; flex-direction: column; gap: 10px; width: 100%; max-width: 300px; margin: 16px 0; }
+    .login-input {
+      padding: 12px 16px; border: none; border-radius: 12px;
+      font-family: 'Pretendard', sans-serif; font-size: 0.92rem; outline: none;
+    }
+    .btn-email-login {
+      padding: 12px; background: rgba(255,255,255,0.25); border: 2px solid white;
+      border-radius: 12px; color: white; font-family: 'Pretendard', sans-serif;
+      font-size: 0.95rem; font-weight: 700; cursor: pointer;
+    }
+    .login-divider { color: rgba(255,255,255,0.6); font-size: 0.8rem; margin: 4px 0; text-align: center; }
+    .login-error-msg { color: #FFD166; font-size: 0.82rem; min-height: 18px; text-align: center; }
+
+    /* ══ 스플래시 ══ */
+    #splash-screen {
+      position: fixed; inset: 0; z-index: 9999;
+      background: linear-gradient(160deg, var(--coral) 0%, #FF3D6B 100%);
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      transition: opacity 0.4s;
+    }
+    #splash-screen.fade-out { opacity: 0; pointer-events: none; }
+    .splash-title { font-size: 2.4rem; font-weight: 900; color: white; margin-top: 16px; }
+    .splash-sub { color: rgba(255,255,255,0.8); font-size: 0.9rem; margin-top: 6px; }
+    .splash-spinner {
+      width: 36px; height: 36px; border-radius: 50%;
+      border: 4px solid rgba(255,255,255,0.3); border-top-color: white;
+      animation: spin 0.8s linear infinite; margin-top: 32px;
+    }
+
+    /* ══ 토스트 ══ */
+    .toast {
+      position: fixed; bottom: 90px; left: 50%; transform: translateX(-50%);
+      background: rgba(38,50,56,0.9); color: white; border-radius: 12px;
+      padding: 12px 20px; font-size: 0.88rem; z-index: 9000; white-space: nowrap;
+      animation: toastIn 0.3s ease;
+    }
+    @keyframes toastIn { from { opacity: 0; transform: translateX(-50%) translateY(10px); } to { opacity: 1; transform: translateX(-50%) translateY(0); } }
+
+    /* ══ 즐겨찾기 오버레이 ══ */
+    #favorites-overlay {
+      position: fixed; inset: 0; z-index: 2300;
+      background: var(--bg); display: flex; flex-direction: column;
+      transform: translateY(100%); transition: transform 0.3s cubic-bezier(0.4,0,0.2,1);
+    }
+    #favorites-overlay.open { transform: translateY(0); }
+    .fav-item {
+      background: white; border-radius: 14px; padding: 14px 16px;
+      margin-bottom: 10px; box-shadow: 0 2px 8px rgba(255,107,138,0.1);
+      display: flex; align-items: center; justify-content: space-between;
+      cursor: pointer; gap: 12px;
+    }
+    .fav-item-name { font-weight: 700; font-size: 0.95rem; color: var(--text); }
+    .fav-item-addr { font-size: 0.78rem; color: var(--text2); margin-top: 2px; }
+
+    /* ══ 다크모드 ══ */
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg:    #1A1015;
+        --white: #1E1520;
+        --card:  #231820;
+        --text:  #F0E8EE;
+        --text2: #9080A0;
+      }
+      #header { background: #8B1A35; }
+      #filter-bar { background: var(--white); box-shadow: 0 2px 8px rgba(0,0,0,0.4); }
+      .filter-btn { background: #2A1828; border-color: #5A2838; color: var(--text); }
+      #bottom-sheet, .form-body, #review-overlay, #form-overlay { background: var(--bg); }
+      .review-card { background: #231820; border-color: #3A1828; }
+      .form-input, .form-textarea { background: #231820; color: var(--text); border-color: #5A2838; }
+      .result-opt, .diff-opt { background: #231820; border-color: #5A2838; color: var(--text2); }
+      .search-item { border-bottom-color: #3A1828; }
+      .success-rate-bar { background: #231820; }
+      .fav-item { background: #231820; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- 스플래시 -->
+<div id="splash-screen">
+  <div class="login-logo">🎮</div>
+  <div class="splash-title">뽑스팟</div>
+  <div class="splash-sub">POP Spot</div>
+  <div class="splash-spinner"></div>
+</div>
+
+<!-- 로딩 -->
+<div id="loading" class="hidden"><div class="loading-spinner"></div></div>
+
+<!-- 로그인 -->
+<div id="login-screen">
+  <div class="login-logo">🎮</div>
+  <div class="login-title">뽑스팟</div>
+  <div class="login-sub">인형뽑기 지점 찾기 & 후기 공유</div>
+  <button class="btn-google" onclick="signInGoogle()">
+    <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" width="22">
+    Google로 로그인
+  </button>
+  <div class="login-divider">또는 이메일로 로그인</div>
+  <div class="email-login-box">
+    <input type="email" id="login-email" class="login-input" placeholder="이메일" autocomplete="email">
+    <input type="password" id="login-password" class="login-input" placeholder="비밀번호 (6자 이상)" autocomplete="current-password">
+    <div class="login-error-msg" id="login-error-msg"></div>
+    <button class="btn-email-login" onclick="signInEmail()">로그인</button>
+    <button class="btn-email-login" style="background:rgba(255,255,255,0.1)" onclick="signUpEmail()">회원가입</button>
+  </div>
+</div>
+
+<!-- 헤더 -->
+<div id="header" class="hidden">
+  <div class="header-title" onclick="goHome()">🎮 뽑스팟</div>
+  <div class="search-bar" onclick="openSearch()">
+    <span>🔍</span>
+    <span class="search-placeholder">지점 검색...</span>
+  </div>
+  <button class="hamburger-btn" onclick="openMenu()">☰</button>
+</div>
+
+<!-- 필터 바 -->
+<div id="filter-bar" class="hidden">
+  <button class="filter-btn" id="area-filter-btn" onclick="openAreaFilter()">
+    지역: 전체 <span class="f-arrow">▾</span>
+  </button>
+</div>
+
+<!-- 지도 -->
+<div id="map" class="hidden"></div>
+
+<!-- Speed Dial -->
+<div id="sd-backdrop" onclick="closeSpeedDial()"></div>
+<div id="speed-dial" class="hidden">
+  <div id="sd-items">
+    <div class="sd-item" id="sd-item-add">
+      <span class="sd-label">지점 등록</span>
+      <button class="sd-btn" onclick="openAddFlow(); closeSpeedDial()">➕</button>
+    </div>
+    <div class="sd-item">
+      <span class="sd-label">내 위치</span>
+      <button class="sd-btn" id="locate-btn" onclick="locateMe(); closeSpeedDial()">📍</button>
+    </div>
+  </div>
+  <button id="sd-trigger" onclick="toggleSpeedDial()">＋</button>
+</div>
+
+<!-- 바텀시트 -->
+<div id="bottom-sheet">
+  <div id="sheet-header">
+    <div class="sheet-handle"></div>
+    <button class="btn-fav-sheet" id="sh-fav-btn" onclick="toggleFavorite()">☆</button>
+    <button class="btn-share-sheet" onclick="sharePlace()" aria-label="공유">
+      <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/>
+        <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>
+      </svg>
+    </button>
+    <button class="btn-close-sheet" onclick="closeSheet()">✕</button>
+  </div>
+  <div id="bottom-sheet-body">
+    <div class="sheet-content">
+      <div class="sheet-name" id="sh-name">-</div>
+      <div class="sheet-addr" id="sh-addr" onclick="openNaverMap()">📍 -</div>
+
+      <!-- 성공률 바 -->
+      <div class="success-rate-bar" id="sh-rate-bar">
+        <div class="success-rate-title">🎯 뽑기 성공률</div>
+        <div class="rate-row">
+          <div class="rate-track"><div class="rate-fill" id="sh-rate-fill" style="width:0%"></div></div>
+          <div class="rate-text" id="sh-rate-text">-</div>
+        </div>
+      </div>
+
+      <div class="contact-bar hidden" id="sh-contact-bar">
+        <button class="btn-call" id="sh-call-btn" onclick="callPhone()">📞 전화하기</button>
+      </div>
+
+      <div class="sheet-divider"></div>
+
+      <!-- 후기 목록 -->
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+        <span style="font-weight:800;font-size:0.95rem">📝 후기</span>
+        <button class="btn-write-review" style="width:auto;padding:7px 14px;font-size:0.8rem" onclick="openReview()">후기 작성</button>
+      </div>
+      <div id="sh-reviews"><div style="color:var(--text2);font-size:0.82rem;padding:8px 0">후기를 불러오는 중...</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- 검색 오버레이 -->
+<div id="search-overlay">
+  <div class="search-overlay-header">
+    <input type="text" class="search-input" id="search-input" placeholder="지점 이름 또는 주소 검색..." oninput="onSearchInput(this.value)" autofocus>
+    <button class="btn-cancel" onclick="closeSearch()">취소</button>
+  </div>
+  <div id="search-results"><div class="search-empty">지점 이름 또는 주소를 입력해주세요</div></div>
+</div>
+
+<!-- 지점 등록 폼 -->
+<div id="form-overlay">
+  <div class="form-header">
+    <button class="form-back" onclick="closeForm()">←</button>
+    <h2 id="form-title">지점 추가</h2>
+  </div>
+  <div class="form-body">
+    <div class="form-place-card" id="form-place-card" style="background:#FFF0F3;border-radius:14px;padding:14px;margin-bottom:20px">
+      <div id="form-place-name" style="font-weight:700;color:var(--text)">-</div>
+      <div id="form-place-addr" style="font-size:0.82rem;color:var(--text2);margin-top:4px">-</div>
+    </div>
+    <div class="form-section">
+      <label class="form-label">영업시간 <span style="font-size:0.75rem;opacity:0.7">(선택사항)</span></label>
+      <input type="text" id="form-hours" class="form-input" placeholder="예: 10:00~24:00 (연중무휴)">
+    </div>
+    <div class="form-section">
+      <label class="form-label">전화번호 <span style="font-size:0.75rem;opacity:0.7">(선택사항)</span></label>
+      <input type="tel" id="form-phone" class="form-input" placeholder="예: 02-1234-5678">
+    </div>
+    <div class="form-section">
+      <label class="form-label">메모 <span style="font-size:0.75rem;opacity:0.7">(선택사항)</span></label>
+      <textarea id="form-memo" class="form-textarea" placeholder="예: 2층 매장, 주차 가능 등..."></textarea>
+    </div>
+    <button class="btn-submit" id="form-submit-btn" onclick="submitForm()">등록하기</button>
+  </div>
+</div>
+
+<!-- 후기 작성 오버레이 -->
+<div id="review-overlay">
+  <div class="form-header">
+    <button class="form-back" onclick="closeReview()">←</button>
+    <h2>후기 작성</h2>
+  </div>
+  <div class="form-body">
+    <div style="background:#FFF0F3;border-radius:14px;padding:12px;margin-bottom:20px">
+      <div id="review-place-name" style="font-weight:700;color:var(--text)">-</div>
+    </div>
+
+    <div class="form-section">
+      <label class="form-label">결과</label>
+      <div class="result-grid">
+        <div class="result-opt success-opt" data-val="success" onclick="selectResult('success')">
+          <span class="r-icon">🎉</span>성공
+        </div>
+        <div class="result-opt partial-opt" data-val="partial" onclick="selectResult('partial')">
+          <span class="r-icon">😅</span>아슬아슬
+        </div>
+        <div class="result-opt fail-opt" data-val="fail" onclick="selectResult('fail')">
+          <span class="r-icon">😭</span>실패
+        </div>
+      </div>
+    </div>
+
+    <div class="form-section">
+      <label class="form-label">투자 금액</label>
+      <div class="invest-input-wrap">
+        <input type="number" id="review-invest" class="form-input" placeholder="예: 3000" min="0" step="500" style="flex:1">
+        <span class="invest-unit">원</span>
+      </div>
+    </div>
+
+    <div class="form-section" id="prize-section">
+      <label class="form-label">뽑은 인형 <span style="font-size:0.75rem;opacity:0.7">(성공/아슬아슬 시)</span></label>
+      <input type="text" id="review-prize" class="form-input" placeholder="예: 산리오 시나모롤 인형">
+    </div>
+
+    <div class="form-section">
+      <label class="form-label">난이도</label>
+      <div class="diff-grid">
+        <div class="diff-opt easy"   data-val="easy"   onclick="selectDiff('easy')">😊 쉬움</div>
+        <div class="diff-opt normal" data-val="normal" onclick="selectDiff('normal')">😐 보통</div>
+        <div class="diff-opt hard"   data-val="hard"   onclick="selectDiff('hard')">😤 어려움</div>
+      </div>
+    </div>
+
+    <div class="form-section">
+      <label class="form-label">후기 <span style="font-size:0.75rem;opacity:0.7">(선택사항)</span></label>
+      <textarea id="review-content" class="form-textarea" placeholder="뽑기 경험을 자유롭게 작성해주세요..."></textarea>
+    </div>
+
+    <div class="form-section">
+      <label class="form-label">사진 <span style="font-size:0.75rem;opacity:0.7">(최대 3장)</span></label>
+      <div class="photo-grid" id="review-photo-grid">
+        <div class="btn-add-photo" onclick="document.getElementById('review-photo-input').click()">
+          <span style="font-size:1.4rem">📷</span>
+          <span>사진 추가</span>
+        </div>
+        <input type="file" id="review-photo-input" accept="image/*" multiple style="display:none" onchange="handlePhotoSelect(this)">
+      </div>
+    </div>
+
+    <button class="btn-submit" onclick="submitReview()">후기 등록</button>
+  </div>
+</div>
+
+<!-- 즐겨찾기 오버레이 -->
+<div id="favorites-overlay">
+  <div class="form-header">
+    <button class="form-back" onclick="closeFavorites()">←</button>
+    <h2>⭐ 즐겨찾기</h2>
+  </div>
+  <div id="favorites-list" style="flex:1;overflow-y:auto;padding:16px">
+    <div style="color:var(--text2);text-align:center;padding:20px">불러오는 중...</div>
+  </div>
+</div>
+
+<script src="firebase-config.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-storage.js"></script>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
+<script>
+firebase.initializeApp(firebaseConfig);
+const auth    = firebase.auth();
+const db      = firebase.firestore();
+const storage = firebase.storage();
+
+const KAKAO_REST_KEY = '993c5a992861be3eea43cb5ee7f68376';
+const ADMIN_EMAIL    = 'shuttle1207@gmail.com';
+
+let map, markerCluster, currentUser = null, allDocs = [], markers = {};
+let currentDocId = null, currentFavorite = false, selectedPlace = null;
+let appInitialized = false, searchTimer = null;
+let reviewPhotos = [], formResult = '', formDiff = '';
+
+/* ════ 스플래시 타임아웃 ════ */
+const _splashTimeout = setTimeout(() => {
+  if (!appInitialized) {
+    appInitialized = true;
+    showApp(null);
+    const s = document.getElementById('splash-screen');
+    s.classList.add('fade-out');
+    setTimeout(() => s.classList.add('hidden'), 420);
+  }
+}, 7000);
+
+/* ════ 인증 ════ */
+auth.onAuthStateChanged(user => {
+  clearTimeout(_splashTimeout);
+  const splash = document.getElementById('splash-screen');
+  const hideSplash = () => { splash.classList.add('fade-out'); setTimeout(() => splash.classList.add('hidden'), 420); };
+  currentUser = user || null;
+  if (!appInitialized) {
+    appInitialized = true;
+    showApp(user);
+    hideSplash();
+  } else if (user) { showApp(user); }
+});
+
+function showApp(user) {
+  document.getElementById('login-screen').style.display = 'none';
+  ['header','filter-bar','map','speed-dial'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.classList.remove('hidden');
+  });
+  const sdAdd = document.getElementById('sd-item-add');
+  if (sdAdd) sdAdd.style.display = user ? '' : 'none';
+  if (!map) initMap();
+  setTimeout(() => map && map.invalidateSize(), 200);
+  if (!allDocs.length) loadPlaces();
+}
+
+function signInGoogle() {
+  auth.signInWithPopup(new firebase.auth.GoogleAuthProvider())
+    .catch(e => showLoginError(e.message));
+}
+function signInEmail() {
+  const email = document.getElementById('login-email').value.trim();
+  const pw    = document.getElementById('login-password').value;
+  if (!email || !pw) { showLoginError('이메일과 비밀번호를 입력해주세요.'); return; }
+  auth.signInWithEmailAndPassword(email, pw).catch(e => showLoginError('로그인 실패: ' + e.message));
+}
+function signUpEmail() {
+  const email = document.getElementById('login-email').value.trim();
+  const pw    = document.getElementById('login-password').value;
+  if (!email || !pw) { showLoginError('이메일과 비밀번호를 입력해주세요.'); return; }
+  auth.createUserWithEmailAndPassword(email, pw).catch(e => showLoginError('회원가입 실패: ' + e.message));
+}
+function signOut() { if (confirm('로그아웃 하시겠어요?')) auth.signOut(); }
+function showLoginError(msg) {
+  const el = document.getElementById('login-error-msg');
+  if (el) el.textContent = msg;
+}
+
+/* ════ 지도 ════ */
+function initMap() {
+  map = L.map('map', { zoomControl: false }).setView([37.5665, 126.9780], 13);
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+    maxZoom: 19, attribution: '© OpenStreetMap © CARTO'
+  }).addTo(map);
+  L.control.zoom({ position: 'bottomleft' }).addTo(map);
+  markerCluster = L.markerClusterGroup({
+    maxClusterRadius: 48,
+    spiderfyOnMaxZoom: true,
+    showCoverageOnHover: false,
+    zoomToBoundsOnClick: true,
+    iconCreateFunction: function(cluster) {
+      const count = cluster.getChildCount();
+      const size  = count < 10 ? 36 : count < 50 ? 42 : 50;
+      return L.divIcon({
+        html: `<div style="width:${size}px;height:${size}px;border-radius:50%;background:linear-gradient(135deg,#FF6B8A,#FF8FA6);border:2.5px solid white;box-shadow:0 3px 12px rgba(255,107,138,0.5);display:flex;align-items:center;justify-content:center;font-family:'Pretendard',sans-serif;font-size:${count<10?'13':'12'}px;font-weight:800;color:white">${count}</div>`,
+        className: '', iconSize: [size, size], iconAnchor: [size/2, size/2],
+      });
+    },
+  });
+  map.addLayer(markerCluster);
+  map.on('click', () => closeSheet());
+}
+
+function createMarkerIcon(name) {
+  const shortName = name ? (name.length > 9 ? name.slice(0, 9) + '…' : name) : '';
+  const nameLabel = shortName
+    ? `<div style="background:rgba(255,107,138,0.9);backdrop-filter:blur(3px);border-radius:6px;padding:2px 7px;font-size:10px;font-weight:700;color:white;white-space:nowrap;box-shadow:0 1px 6px rgba(255,107,138,0.4);margin-bottom:3px;font-family:'Pretendard',sans-serif">${shortName}</div>`
+    : '';
+  const totalH = 32 + 7 + (shortName ? 20 : 0);
+  return L.divIcon({
+    html: `<div style="display:flex;flex-direction:column;align-items:center;cursor:pointer">${nameLabel}<div style="width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,#FF6B8A,#FF8FA6);border:2.5px solid white;box-shadow:0 2px 8px rgba(255,107,138,0.4);display:flex;align-items:center;justify-content:center;font-size:16px">🎮</div><div style="width:0;height:0;border-left:5px solid transparent;border-right:5px solid transparent;border-top:7px solid white;margin-top:-1px;filter:drop-shadow(0 2px 2px rgba(255,107,138,0.3))"></div></div>`,
+    className: '', iconSize: [32, totalH], iconAnchor: [16, totalH], popupAnchor: [0, -(totalH+4)],
+  });
+}
+
+/* ════ 데이터 ════ */
+async function loadPlaces() {
+  showLoading();
+  try {
+    const timeout = new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), 10000));
+    const snap = await Promise.race([db.collection('popspot_locations').get(), timeout]);
+    allDocs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    renderMarkers();
+  } catch(e) {
+    showToast(e.message === 'timeout' ? '로딩 시간이 초과됐습니다.' : '데이터 로드 실패');
+  }
+  hideLoading();
+  db.collection('popspot_locations').onSnapshot(snap => {
+    allDocs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    renderMarkers();
+  });
+}
+
+function renderMarkers() {
+  markerCluster.clearLayers(); markers = {};
+  allDocs.forEach(doc => {
+    if (!doc.lat || !doc.lng) return;
+    const marker = L.marker([doc.lat, doc.lng], { icon: createMarkerIcon(doc.name) });
+    marker.on('click', (e) => { L.DomEvent.stopPropagation(e); openSheet(doc.id); });
+    markerCluster.addLayer(marker);
+    markers[doc.id] = marker;
+  });
+}
+
+/* ════ 바텀시트 ════ */
+async function openSheet(docId) {
+  const doc = allDocs.find(d => d.id === docId);
+  if (!doc) return;
+  if (!currentUser) { document.getElementById('login-screen').style.display = 'flex'; return; }
+  currentDocId = docId;
+  document.getElementById('sh-name').textContent = doc.name;
+  document.getElementById('sh-addr').textContent = '📍 ' + (doc.address || '-');
+  const hasPhone = !!(doc.phone && doc.phone.trim());
+  const contactBar = document.getElementById('sh-contact-bar');
+  contactBar.classList.toggle('hidden', !hasPhone);
+  if (hasPhone) document.getElementById('sh-call-btn').textContent = '📞 ' + doc.phone;
+
+  document.getElementById('bottom-sheet').classList.add('open');
+  document.getElementById('bottom-sheet-body').scrollTop = 0;
+
+  loadFavoriteStatus();
+  loadReviews(docId);
+}
+
+function closeSheet() {
+  document.getElementById('bottom-sheet').classList.remove('open');
+  currentDocId = null;
+  setTimeout(() => { document.getElementById('bottom-sheet-body').scrollTop = 0; }, 360);
+}
+
+async function loadFavoriteStatus() {
+  if (!currentUser || !currentDocId) return;
+  const snap = await db.collection('popspot_favorites').doc(`${currentUser.uid}_${currentDocId}`).get();
+  currentFavorite = snap.exists;
+  const btn = document.getElementById('sh-fav-btn');
+  btn.textContent = currentFavorite ? '★' : '☆';
+  btn.classList.toggle('active', currentFavorite);
+}
+
+async function toggleFavorite() {
+  if (!currentDocId || !currentUser) return;
+  const ref = db.collection('popspot_favorites').doc(`${currentUser.uid}_${currentDocId}`);
+  if (currentFavorite) {
+    await ref.delete(); currentFavorite = false;
+    document.getElementById('sh-fav-btn').textContent = '☆';
+    document.getElementById('sh-fav-btn').classList.remove('active');
+    showToast('즐겨찾기에서 제거됐습니다.');
+  } else {
+    await ref.set({ uid: currentUser.uid, placeId: currentDocId, addedAt: firebase.firestore.FieldValue.serverTimestamp() });
+    currentFavorite = true;
+    document.getElementById('sh-fav-btn').textContent = '★';
+    document.getElementById('sh-fav-btn').classList.add('active');
+    showToast('⭐ 즐겨찾기에 추가됐습니다!');
+  }
+}
+
+async function loadReviews(docId) {
+  const container = document.getElementById('sh-reviews');
+  container.innerHTML = '<div style="color:var(--text2);font-size:0.82rem;padding:8px 0">후기를 불러오는 중...</div>';
+  try {
+    const snap = await db.collection('popspot_reviews')
+      .where('locationId', '==', docId)
+      .orderBy('createdAt', 'desc')
+      .limit(20)
+      .get();
+
+    // 성공률 계산
+    const reviews = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    const total   = reviews.length;
+    const success = reviews.filter(r => r.result === 'success' || r.result === 'partial').length;
+    const rate    = total > 0 ? Math.round((success / total) * 100) : null;
+
+    if (rate !== null) {
+      document.getElementById('sh-rate-bar').style.display = '';
+      document.getElementById('sh-rate-fill').style.width = rate + '%';
+      document.getElementById('sh-rate-text').textContent = rate + '%';
+    } else {
+      document.getElementById('sh-rate-bar').style.display = 'none';
+    }
+
+    if (!reviews.length) {
+      container.innerHTML = '<div style="color:var(--text2);font-size:0.85rem;padding:16px 0;text-align:center">아직 후기가 없어요.<br>첫 번째 후기를 작성해보세요! 🎮</div>';
+      return;
+    }
+
+    const resultLabel = { success:'성공 🎉', partial:'아슬아슬 😅', fail:'실패 😭' };
+    const diffLabel   = { easy:'쉬움', normal:'보통', hard:'어려움' };
+    const diffClass   = { easy:'easy', normal:'normal', hard:'hard' };
+
+    container.innerHTML = reviews.map(r => {
+      const date = r.createdAt?.toDate?.()?.toLocaleDateString('ko-KR') || '';
+      const avatarHtml = r.photoUrl
+        ? `<img src="${r.photoUrl}">`
+        : (r.userName?.[0] || '?');
+      const photos = (r.photoUrls || []).map(url =>
+        `<img src="${url}" class="review-photo" onclick="openPhotoViewer('${url}')">`
+      ).join('');
+      return `<div class="review-card">
+        <div class="review-header">
+          <div class="review-avatar">${avatarHtml}</div>
+          <div class="review-meta">
+            <div class="review-name">${r.userName || '익명'}</div>
+            <div class="review-date">${date}</div>
+          </div>
+          <span class="result-badge ${r.result}">${resultLabel[r.result] || r.result}</span>
+        </div>
+        <div class="review-invest">💰 ${(r.investment || 0).toLocaleString()}원 투자</div>
+        ${r.prizeName ? `<div class="review-prize">🧸 ${r.prizeName}</div>` : ''}
+        ${r.difficulty ? `<span class="difficulty-badge diff-${diffClass[r.difficulty]}">${diffLabel[r.difficulty]}</span>` : ''}
+        ${r.content ? `<div class="review-content" style="margin-top:6px">${r.content}</div>` : ''}
+        ${photos ? `<div class="review-photos">${photos}</div>` : ''}
+      </div>`;
+    }).join('');
+  } catch(e) {
+    container.innerHTML = `<div style="color:var(--text2);font-size:0.82rem">후기 로드 실패: ${e.message}</div>`;
+  }
+}
+
+/* ════ 후기 작성 ════ */
+function openReview() {
+  if (!currentUser) { document.getElementById('login-screen').style.display = 'flex'; return; }
+  const doc = allDocs.find(d => d.id === currentDocId);
+  document.getElementById('review-place-name').textContent = doc?.name || '-';
+  document.getElementById('review-invest').value = '';
+  document.getElementById('review-prize').value = '';
+  document.getElementById('review-content').value = '';
+  document.querySelectorAll('.result-opt').forEach(el => el.classList.remove('active'));
+  document.querySelectorAll('.diff-opt').forEach(el => el.classList.remove('active'));
+  reviewPhotos = [];
+  renderPhotoGrid();
+  formResult = ''; formDiff = '';
+  document.getElementById('review-overlay').classList.add('open');
+  document.querySelector('#review-overlay .form-body').scrollTop = 0;
+}
+
+function closeReview() { document.getElementById('review-overlay').classList.remove('open'); }
+
+function selectResult(val) {
+  formResult = val;
+  document.querySelectorAll('.result-opt').forEach(el => el.classList.remove('active'));
+  document.querySelector(`.result-opt[data-val="${val}"]`)?.classList.add('active');
+  document.getElementById('prize-section').style.display = (val === 'fail') ? 'none' : '';
+}
+
+function selectDiff(val) {
+  formDiff = val;
+  document.querySelectorAll('.diff-opt').forEach(el => el.classList.remove('active'));
+  document.querySelector(`.diff-opt[data-val="${val}"]`)?.classList.add('active');
+}
+
+function handlePhotoSelect(input) {
+  const files = [...input.files].slice(0, 3 - reviewPhotos.length);
+  files.forEach(f => { if (f.size < 5 * 1024 * 1024) reviewPhotos.push(f); });
+  renderPhotoGrid();
+  input.value = '';
+}
+
+function renderPhotoGrid() {
+  const grid = document.getElementById('review-photo-grid');
+  const thumbs = reviewPhotos.map((f, i) => {
+    const url = URL.createObjectURL(f);
+    return `<img src="${url}" class="review-photo" onclick="removePhoto(${i})">`;
+  }).join('');
+  const addBtn = reviewPhotos.length < 3
+    ? `<div class="btn-add-photo" onclick="document.getElementById('review-photo-input').click()"><span style="font-size:1.4rem">📷</span><span>사진 추가</span></div>`
+    : '';
+  grid.innerHTML = thumbs + addBtn + `<input type="file" id="review-photo-input" accept="image/*" multiple style="display:none" onchange="handlePhotoSelect(this)">`;
+}
+
+function removePhoto(idx) { reviewPhotos.splice(idx, 1); renderPhotoGrid(); }
+
+async function submitReview() {
+  if (!currentDocId || !currentUser) return;
+  if (!formResult) { showToast('결과를 선택해주세요.'); return; }
+  const invest = parseInt(document.getElementById('review-invest').value) || 0;
+  showLoading();
+  try {
+    // 사진 업로드
+    const photoUrls = [];
+    for (const f of reviewPhotos) {
+      const ref = storage.ref(`popspot/reviews/${currentDocId}/${Date.now()}_${f.name}`);
+      await ref.put(f);
+      photoUrls.push(await ref.getDownloadURL());
+    }
+    await db.collection('popspot_reviews').add({
+      locationId:  currentDocId,
+      uid:         currentUser.uid,
+      userName:    currentUser.displayName || currentUser.email?.split('@')[0] || '익명',
+      photoUrl:    currentUser.photoURL || null,
+      result:      formResult,
+      investment:  invest,
+      prizeName:   document.getElementById('review-prize').value.trim() || null,
+      difficulty:  formDiff || null,
+      content:     document.getElementById('review-content').value.trim() || null,
+      photoUrls,
+      createdAt:   firebase.firestore.FieldValue.serverTimestamp(),
+    });
+    showToast('✅ 후기가 등록됐습니다!');
+    closeReview();
+    loadReviews(currentDocId);
+  } catch(e) { showToast('등록 실패: ' + e.message); }
+  hideLoading();
+}
+
+/* ════ 지점 등록 ════ */
+function openAddFlow() {
+  if (!currentUser) { document.getElementById('login-screen').style.display = 'flex'; return; }
+  openSearch('add');
+}
+
+let searchMode = 'find';
+function openSearch(mode = 'find') {
+  searchMode = mode;
+  document.getElementById('search-overlay').classList.add('open');
+  document.getElementById('search-input').value = '';
+  document.getElementById('search-results').innerHTML = '<div class="search-empty">지점 이름 또는 주소를 입력해주세요</div>';
+  setTimeout(() => document.getElementById('search-input').focus(), 100);
+}
+
+function closeSearch() {
+  document.getElementById('search-overlay').classList.remove('open');
+  document.getElementById('search-input').value = '';
+}
+
+function onSearchInput(val) {
+  clearTimeout(searchTimer);
+  if (!val.trim()) {
+    document.getElementById('search-results').innerHTML = '<div class="search-empty">지점 이름 또는 주소를 입력해주세요</div>';
+    return;
+  }
+  searchTimer = setTimeout(() => doSearch(val), 350);
+}
+
+async function doSearch(query) {
+  const resultsEl = document.getElementById('search-results');
+  resultsEl.innerHTML = '<div class="search-empty">검색 중...</div>';
+  try {
+    const resp = await fetch(`https://dapi.kakao.com/v2/local/search/keyword.json?query=${encodeURIComponent(query)}&size=15`, {
+      headers: { 'Authorization': `KakaoAK ${KAKAO_REST_KEY}` }
+    });
+    const data = await resp.json();
+    const places = data.documents || [];
+    if (!places.length) { resultsEl.innerHTML = '<div class="search-empty">검색 결과가 없습니다</div>'; return; }
+
+    if (searchMode === 'find') {
+      window._searchResults = { type: 'kakao', data: places };
+      resultsEl.innerHTML = places.map((r, i) => {
+        const existing = allDocs.find(d => d.kakaoId === r.id);
+        return `<div class="search-item" onclick="selectFromSearch(${i})">
+          <div class="search-item-name">${r.place_name}${existing ? ' ✅' : ''}</div>
+          <div class="search-item-addr">${r.road_address_name || r.address_name}</div>
+        </div>`;
+      }).join('');
+    } else {
+      window._searchResults = { type: 'kakao', data: places };
+      resultsEl.innerHTML = places.map((r, i) =>
+        `<div class="search-item" onclick="selectForAdd(${i})">
+          <div class="search-item-name">${r.place_name}</div>
+          <div class="search-item-addr">${r.road_address_name || r.address_name}</div>
+        </div>`
+      ).join('');
+    }
+  } catch(e) { resultsEl.innerHTML = `<div class="search-empty">검색 실패: ${e.message}</div>`; }
+}
+
+function selectFromSearch(idx) {
+  const r = window._searchResults.data[idx];
+  const existing = allDocs.find(d => d.kakaoId === r.id);
+  if (existing) {
+    closeSearch();
+    map.setView([existing.lat, existing.lng], 16);
+    setTimeout(() => openSheet(existing.id), 350);
+    return;
+  }
+  closeSearch();
+  map.setView([parseFloat(r.y), parseFloat(r.x)], 16);
+}
+
+function selectForAdd(idx) {
+  const r = window._searchResults.data[idx];
+  selectedPlace = {
+    name: r.place_name,
+    address: r.road_address_name || r.address_name,
+    lat: parseFloat(r.y), lng: parseFloat(r.x),
+    kakaoId: r.id, phone: r.phone || '', category: r.category_name || '',
+  };
+  closeSearch();
+  openFormForAdd();
+}
+
+function openFormForAdd() {
+  if (!selectedPlace) { openSearch('add'); return; }
+  document.getElementById('form-title').textContent = '지점 추가';
+  document.getElementById('form-place-name').textContent = selectedPlace.name;
+  document.getElementById('form-place-addr').textContent = selectedPlace.address;
+  document.getElementById('form-submit-btn').textContent = '등록하기';
+  document.getElementById('form-hours').value = '';
+  if (selectedPlace.phone) document.getElementById('form-phone').value = selectedPlace.phone;
+  document.getElementById('form-memo').value = '';
+  const fo = document.getElementById('form-overlay');
+  fo.classList.add('open');
+  fo.querySelector('.form-body').scrollTop = 0;
+}
+
+function closeForm() { document.getElementById('form-overlay').classList.remove('open'); }
+
+async function submitForm() {
+  if (!selectedPlace) return;
+  showLoading();
+  try {
+    const existing = allDocs.find(d => d.kakaoId === selectedPlace.kakaoId);
+    if (existing) { showToast('이미 등록된 지점입니다.'); hideLoading(); closeForm(); return; }
+    await db.collection('popspot_locations').add({
+      name: selectedPlace.name, address: selectedPlace.address,
+      lat: selectedPlace.lat, lng: selectedPlace.lng,
+      kakaoId: selectedPlace.kakaoId, phone: document.getElementById('form-phone').value.trim() || null,
+      hours: document.getElementById('form-hours').value.trim() || null,
+      memo: document.getElementById('form-memo').value.trim() || null,
+      addedBy: { uid: currentUser.uid, name: currentUser.displayName || '익명' },
+      addedAt: firebase.firestore.FieldValue.serverTimestamp(),
+    });
+    showToast('✅ 지점이 등록됐습니다!');
+    closeForm();
+  } catch(e) { showToast('등록 실패: ' + e.message); }
+  hideLoading();
+}
+
+/* ════ 내 위치 ════ */
+let userLocationMarker = null;
+function locateMe() {
+  if (!navigator.geolocation) { showToast('위치 서비스를 지원하지 않습니다.'); return; }
+  navigator.geolocation.getCurrentPosition(pos => {
+    const { latitude: lat, longitude: lng } = pos.coords;
+    if (userLocationMarker) userLocationMarker.remove();
+    const icon = L.divIcon({ html: '<div style="width:14px;height:14px;border-radius:50%;background:#FF6B8A;border:3px solid white;box-shadow:0 0 0 4px rgba(255,107,138,0.3)"></div>', className: '', iconSize: [14,14], iconAnchor: [7,7] });
+    userLocationMarker = L.marker([lat, lng], { icon }).addTo(map);
+    map.setView([lat, lng], 15);
+    showToast('✅ 내 위치로 이동했습니다');
+  }, () => showToast('위치 정보를 가져올 수 없습니다.'));
+}
+
+/* ════ Speed Dial ════ */
+function toggleSpeedDial() {
+  const dial = document.getElementById('speed-dial');
+  const bd   = document.getElementById('sd-backdrop');
+  const open = dial.classList.toggle('open');
+  bd.classList.toggle('open', open);
+}
+function closeSpeedDial() {
+  document.getElementById('speed-dial').classList.remove('open');
+  document.getElementById('sd-backdrop').classList.remove('open');
+}
+
+/* ════ 공유 ════ */
+function sharePlace() {
+  if (!currentDocId) return;
+  const doc = allDocs.find(d => d.id === currentDocId);
+  if (!doc) return;
+  const url = `${location.origin}${location.pathname}#${currentDocId}`;
+  if (navigator.share) {
+    navigator.share({ title: `🎮 ${doc.name}`, text: doc.address || '', url }).catch(() => copyToClipboard(url));
+  } else { copyToClipboard(url); }
+}
+function copyToClipboard(text) {
+  navigator.clipboard?.writeText(text).then(() => showToast('🔗 링크가 복사됐습니다!')) || showToast('🔗 링크가 복사됐습니다!');
+}
+
+/* ════ 네이버 지도 ════ */
+function openNaverMap() {
+  const doc = allDocs.find(d => d.id === currentDocId);
+  if (!doc) return;
+  const query = encodeURIComponent(doc.name || doc.address);
+  const isMobile = /android|iphone|ipad/i.test(navigator.userAgent);
+  window.open(isMobile ? `nmap://search?query=${query}&appname=com.example.popspot` : `https://map.naver.com/v5/search/${query}`, '_blank');
+}
+
+function callPhone() {
+  const doc = allDocs.find(d => d.id === currentDocId);
+  if (doc?.phone) window.location.href = `tel:${doc.phone.replace(/[^0-9+]/g, '')}`;
+}
+
+/* ════ 즐겨찾기 목록 ════ */
+function openFavorites() {
+  document.getElementById('favorites-overlay').classList.add('open');
+  loadFavoritesList();
+}
+function closeFavorites() { document.getElementById('favorites-overlay').classList.remove('open'); }
+async function loadFavoritesList() {
+  const container = document.getElementById('favorites-list');
+  if (!currentUser) { container.innerHTML = '<div style="color:var(--text2);text-align:center;padding:20px">로그인이 필요합니다.</div>'; return; }
+  container.innerHTML = '<div style="color:var(--text2);text-align:center;padding:20px">불러오는 중...</div>';
+  const snap = await db.collection('popspot_favorites').where('uid','==',currentUser.uid).get();
+  if (!snap.docs.length) { container.innerHTML = '<div style="color:var(--text2);text-align:center;padding:20px">즐겨찾기한 지점이 없습니다.</div>'; return; }
+  const ids = snap.docs.map(d => d.data().placeId);
+  const docs = allDocs.filter(d => ids.includes(d.id));
+  container.innerHTML = docs.length
+    ? docs.map(doc => `<div class="fav-item" onclick="goToPlace('${doc.id}'); closeFavorites()">
+        <div><div class="fav-item-name">🎮 ${doc.name}</div><div class="fav-item-addr">${doc.address||''}</div></div>
+      </div>`).join('')
+    : '<div style="color:var(--text2);text-align:center;padding:20px">즐겨찾기한 지점이 없습니다.</div>';
+}
+function goToPlace(id) {
+  const doc = allDocs.find(d => d.id === id);
+  if (!doc?.lat) return;
+  map.setView([doc.lat, doc.lng], 16);
+  setTimeout(() => openSheet(id), 350);
+}
+
+/* ════ 메뉴 ════ */
+function openMenu() { /* 향후 확장 */ }
+function closeMenu() {}
+
+/* ════ 지역 필터 ════ */
+function openAreaFilter() { /* 향후 확장 */ }
+
+/* ════ goHome ════ */
+function goHome() {
+  closeSheet(); closeSearch();
+  map.flyTo([37.5665, 126.9780], 13, { duration: 0.8 });
+}
+
+/* ════ 사진 뷰어 ════ */
+function openPhotoViewer(url) {
+  const ov = document.createElement('div');
+  ov.style = 'position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.9);display:flex;align-items:center;justify-content:center';
+  ov.onclick = () => ov.remove();
+  ov.innerHTML = `<img src="${url}" style="max-width:95vw;max-height:95vh;object-fit:contain;border-radius:8px">`;
+  document.body.appendChild(ov);
+}
+
+/* ════ 유틸 ════ */
+let toastTimer;
+function showToast(msg) {
+  clearTimeout(toastTimer);
+  document.querySelector('.toast')?.remove();
+  const el = document.createElement('div');
+  el.className = 'toast'; el.textContent = msg;
+  document.body.appendChild(el);
+  toastTimer = setTimeout(() => el.remove(), 2800);
+}
+function showLoading() { document.getElementById('loading').classList.remove('hidden'); }
+function hideLoading() { document.getElementById('loading').classList.add('hidden'); }
+
+/* ════ 바텀시트 스와이프 ════ */
+(function() {
+  const sheet  = document.getElementById('bottom-sheet');
+  const body   = document.getElementById('bottom-sheet-body');
+  const header = document.getElementById('sheet-header');
+  let startY = 0, startScroll = 0, dragging = false;
+  function onStart(e) { startY = (e.touches?.[0]||e).clientY; startScroll = body.scrollTop; dragging = false; }
+  function onMove(e) {
+    const dy = (e.touches?.[0]||e).clientY - startY;
+    if (startScroll > 0 || dy <= 0) return;
+    dragging = true; sheet.style.transition = 'none';
+    sheet.style.transform = `translateY(${Math.max(0,dy)}px)`;
+  }
+  function onEnd(e) {
+    sheet.style.transition = '';
+    if (dragging && (e.changedTouches?.[0]||e).clientY - startY > 80) closeSheet();
+    else sheet.style.transform = '';
+    dragging = false;
+  }
+  [body, header].forEach(el => {
+    el.addEventListener('touchstart', onStart, { passive: true });
+    el.addEventListener('touchmove', onMove, { passive: true });
+    el.addEventListener('touchend', onEnd);
+  });
+})();
+
+/* ════ Android 뒤로가기 ════ */
+(function() {
+  history.pushState({ page: 'app' }, '');
+  let exitReady = false, exitTimer = null, skipping = false;
+  function isOpen(id) { const el = document.getElementById(id); return el && (el.classList.contains('open') || el.style.display === 'flex'); }
+  function tryCloseUI() {
+    if (isOpen('form-overlay'))      { closeForm();      return true; }
+    if (isOpen('review-overlay'))    { closeReview();    return true; }
+    if (isOpen('favorites-overlay')) { closeFavorites(); return true; }
+    if (isOpen('login-screen'))      { document.getElementById('login-screen').style.display='none'; return true; }
+    if (isOpen('search-overlay'))    { closeSearch();    return true; }
+    if (isOpen('speed-dial'))        { closeSpeedDial(); return true; }
+    if (isOpen('bottom-sheet'))      { closeSheet();     return true; }
+    return false;
+  }
+  window.addEventListener('popstate', function() {
+    if (skipping) { skipping = false; return; }
+    history.pushState({ page: 'app' }, '');
+    if (tryCloseUI()) { exitReady = false; clearTimeout(exitTimer); return; }
+    if (!exitReady) {
+      exitReady = true;
+      showToast('뒤로가기를 한 번 더 누르면 종료됩니다');
+      exitTimer = setTimeout(() => { exitReady = false; }, 2000);
+    } else { skipping = true; history.go(-history.length); }
+  });
+})();
+
+/* ════ SW ════ */
+if ('serviceWorker' in navigator) {
+  let swReg = null;
+  navigator.serviceWorker.register('sw.js').then(reg => {
+    swReg = reg; reg.update();
+    reg.addEventListener('updatefound', () => {
+      const newSW = reg.installing;
+      newSW.addEventListener('statechange', () => {
+        if (newSW.state === 'installed' && navigator.serviceWorker.controller) newSW.postMessage({ type: 'SKIP_WAITING' });
+      });
+    });
+  });
+  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && swReg) swReg.update(); });
+  navigator.serviceWorker.addEventListener('controllerchange', () => window.location.reload());
+}
+</script>
+</body>
+</html>
