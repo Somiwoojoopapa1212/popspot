@@ -539,7 +539,7 @@
 
 <!-- 헤더 -->
 <div id="header" class="hidden">
-  <div class="header-title" onclick="goHome()">🎮 뽑스팟</div>
+  <div class="header-title" onclick="goHome()"><img src="icons/icon-192.png" style="width:28px;height:28px;border-radius:8px;object-fit:cover;vertical-align:middle;margin-right:6px">뽑스팟</div>
   <div class="search-bar" onclick="openSearch()">
     <span>🔍</span>
     <span class="search-placeholder">지점 검색...</span>
@@ -1356,7 +1356,7 @@ function openEditReview(reviewId) {
   selectSize(r.prizeSize || '');
   document.getElementById('review-content').value = r.content || '';
   reviewPhotos = [];
-  document.getElementById('review-photos-preview').innerHTML = '';
+  renderPhotoGrid();
   document.querySelector('#review-overlay h2').textContent = '후기 수정';
   document.querySelector('#review-overlay .btn-submit').textContent = '수정하기';
   document.querySelector('#review-overlay .btn-submit').onclick = saveEditReview;
