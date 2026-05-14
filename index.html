@@ -122,8 +122,14 @@
     #bottom-sheet.open { transform: translateY(0); }
     #sheet-header {
       flex-shrink: 0; position: relative; padding: 0 16px;
-      display: flex; align-items: center; justify-content: flex-end; gap: 8px;
+      display: flex; align-items: center; justify-content: space-between; gap: 8px;
       min-height: 48px;
+    }
+    #sh-review-btn-left {
+      display: none; align-items: center; gap: 5px;
+      background: var(--coral); border: none; border-radius: 20px;
+      padding: 5px 12px 5px 8px; cursor: pointer; color: white;
+      font-family: 'Pretendard', sans-serif; font-size: 0.8rem; font-weight: 700;
     }
     #sheet-header .sheet-handle {
       position: absolute; left: 50%; transform: translateX(-50%); top: 10px;
@@ -584,10 +590,14 @@
 <div id="bottom-sheet">
   <div id="sheet-header">
     <div class="sheet-handle"></div>
-    <button class="btn-fav-sheet" id="sh-fav-btn" onclick="toggleFavorite()"><img src="icons/10_favorite.png" style="width:22px;height:22px;object-fit:contain"></button>
-    <button class="btn-review-sheet" id="sh-review-btn" onclick="openReview()" style="display:none" aria-label="후기 작성"><img src="icons/09_write_review.png" style="width:22px;height:22px;object-fit:contain"></button>
-    <button class="btn-share-sheet" onclick="sharePlace()" aria-label="공유"><img src="icons/11_share.png" style="width:22px;height:22px;object-fit:contain"></button>
-    <button class="btn-close-sheet" onclick="closeSheet()">✕</button>
+    <button id="sh-review-btn-left" onclick="openReview()">
+      <img src="icons/09_write_review.png" style="width:16px;height:16px;object-fit:contain"> 후기 작성
+    </button>
+    <div style="display:flex;align-items:center;gap:8px">
+      <button class="btn-fav-sheet" id="sh-fav-btn" onclick="toggleFavorite()"><img src="icons/10_favorite.png" style="width:22px;height:22px;object-fit:contain"></button>
+      <button class="btn-share-sheet" onclick="sharePlace()" aria-label="공유"><img src="icons/11_share.png" style="width:22px;height:22px;object-fit:contain"></button>
+      <button class="btn-close-sheet" onclick="closeSheet()">✕</button>
+    </div>
   </div>
   <div id="bottom-sheet-body">
     <div class="sheet-content">
@@ -1173,7 +1183,7 @@ async function openSheet(docId) {
   // 수정·신고·후기작성 버튼 (로그인 사용자만)
   document.getElementById('sh-edit-bar').classList.toggle('hidden', !currentUser);
   document.getElementById('sh-report-bar').classList.toggle('hidden', !currentUser);
-  document.getElementById('sh-review-btn').style.display = currentUser ? 'flex' : 'none';
+  document.getElementById('sh-review-btn-left').style.display = currentUser ? 'flex' : 'none';
   // 즐겨찾기: Firestore 조회 전 즉시 비활성 상태로 초기화 (race condition 방지)
   currentFavorite = false;
   updateFavBtn(false);
