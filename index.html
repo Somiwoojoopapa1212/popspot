@@ -160,37 +160,42 @@
 
     /* ══ 후기 카드 ══ */
     .review-card {
-      background: #FFF8F2; border-radius: 14px;
+      background: var(--card); border-radius: 16px;
       padding: 14px; margin-bottom: 10px;
       border: 1px solid #FFE8ED;
     }
-    .review-header { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
-    .review-avatar { width: 30px; height: 30px; border-radius: 50%; background: var(--coral); display: flex; align-items: center; justify-content: center; color: white; font-size: 0.8rem; font-weight: 700; flex-shrink: 0; overflow: hidden; }
+    .review-header { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+    .review-avatar { width: 32px; height: 32px; border-radius: 50%; background: var(--coral); display: flex; align-items: center; justify-content: center; color: white; font-size: 0.8rem; font-weight: 700; flex-shrink: 0; overflow: hidden; }
     .review-avatar img { width: 100%; height: 100%; object-fit: cover; }
-    .review-meta { flex: 1; }
+    .review-meta { flex: 1; min-width: 0; }
     .review-name { font-size: 0.85rem; font-weight: 700; color: var(--text); }
     .review-date { font-size: 0.72rem; color: var(--text2); }
-    .result-badge {
-      padding: 3px 10px; border-radius: 20px; font-size: 0.75rem; font-weight: 700;
+    .result-badge { display:inline-flex;align-items:center;gap:3px;
+      padding: 4px 10px; border-radius: 20px; font-size: 0.75rem; font-weight: 700; flex-shrink:0;
     }
     .result-badge.success { background: #E8F5E9; color: var(--success); }
     .result-badge.fail    { background: #FFEBEE; color: var(--fail); }
     .result-badge.partial { background: #FFF3E0; color: var(--partial); }
-
-    .review-invest {
-      display: inline-flex; align-items: center; gap: 4px;
-      background: #FFF0F3; border-radius: 8px; padding: 4px 10px;
-      font-size: 0.8rem; color: var(--coral); font-weight: 700; margin-bottom: 6px;
+    /* 투자·인형 정보 행 */
+    .review-info-row { display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-bottom:8px; }
+    .review-invest-chip {
+      display:inline-flex; align-items:center; gap:4px;
+      background:#FFF0F3; border-radius:8px; padding:4px 10px;
+      font-size:0.8rem; color:var(--coral); font-weight:700;
     }
-    .review-prize {
-      font-size: 0.88rem; color: var(--text); margin-bottom: 6px; font-weight: 600;
+    .review-prize-chip {
+      display:inline-flex; align-items:center; gap:4px;
+      background:#F3F0FF; border-radius:8px; padding:4px 10px;
+      font-size:0.8rem; color:#7B5EA7; font-weight:600; max-width:100%;
     }
-    .review-content { font-size: 0.82rem; color: var(--text2); line-height: 1.55; }
-    .review-photos { display: flex; gap: 6px; margin-top: 8px; flex-wrap: wrap; }
-    .review-photo { width: 72px; height: 72px; border-radius: 10px; object-fit: cover; cursor: pointer; }
+    .review-tags-row { display:flex; align-items:center; gap:6px; flex-wrap:wrap; margin-bottom:6px; }
+    .review-content { font-size:0.82rem; color:var(--text2); line-height:1.55; margin-bottom:6px; }
+    .review-photos { display:flex; gap:6px; margin-top:8px; flex-wrap:wrap; }
+    .review-photo { width:72px; height:72px; border-radius:10px; object-fit:cover; cursor:pointer; }
+    .review-actions { display:flex; justify-content:flex-end; gap:6px; margin-top:8px; }
     .difficulty-badge {
-      display: inline-block; padding: 2px 8px; border-radius: 10px;
-      font-size: 0.72rem; font-weight: 700; margin-top: 4px;
+      display:inline-flex; align-items:center; gap:3px; padding:3px 8px; border-radius:10px;
+      font-size:0.72rem; font-weight:700;
     }
     .diff-easy   { background: #E8F5E9; color: var(--success); }
     .diff-normal { background: #FFF3E0; color: var(--partial); }
@@ -476,14 +481,15 @@
       .result-opt, .diff-opt { background: #231820; border-color: #5A2838; color: var(--text2); }
       .form-place-card { background: #2A1020 !important; }
       .success-rate-bar { background: #2A1020 !important; }
-      .review-invest { background: #2A1020 !important; color: var(--coral) !important; }
+      .review-invest-chip { background: #2A1020 !important; color: var(--coral) !important; }
+      .review-prize-chip { background: #1E1A2E !important; color: #B39DDB !important; }
       .review-card { background: #231820 !important; border-color: #3A1828 !important; }
       .btn-add-photo { background: #2A1020 !important; border-color: #5A2838 !important; }
       .form-label { color: var(--text2) !important; }
       .invest-unit { color: var(--text2) !important; }
       .sh-reviews .review-card { background: #231820 !important; }
       .review-name { color: var(--text) !important; }
-      .review-prize { color: var(--text) !important; }
+      .review-prize-chip { color: #B39DDB !important; }
       .review-content { color: var(--text2) !important; }
       .hours-select { background-color:#231820 !important; color:var(--text) !important; border-color:#5A2838 !important; }
       .day-chip { background:#231820 !important; border-color:#5A2838 !important; color:var(--text2) !important; }
@@ -1073,16 +1079,26 @@ function initMap() {
   map.on('click', () => closeSheet());
 }
 
-function createMarkerIcon(name) {
+let locationRates = {}; // { locationId: successRate(0-100) }
+
+function buildMarkerIcon(imgSrc, name) {
   const shortName = name ? (name.length > 9 ? name.slice(0, 9) + '…' : name) : '';
   const nameLabel = shortName
-    ? `<div style="background:rgba(255,107,138,0.9);backdrop-filter:blur(3px);border-radius:6px;padding:2px 7px;font-size:10px;font-weight:700;color:white;white-space:nowrap;box-shadow:0 1px 6px rgba(255,107,138,0.4);margin-bottom:3px;font-family:'Pretendard',sans-serif">${shortName}</div>`
+    ? `<div style="background:rgba(38,50,56,0.75);backdrop-filter:blur(3px);border-radius:6px;padding:2px 7px;font-size:10px;font-weight:700;color:white;white-space:nowrap;box-shadow:0 1px 6px rgba(0,0,0,0.2);margin-bottom:3px;font-family:'Pretendard',sans-serif">${shortName}</div>`
     : '';
-  const totalH = 32 + 7 + (shortName ? 20 : 0);
+  const totalH = 36 + 8 + (shortName ? 20 : 0);
   return L.divIcon({
-    html: `<div style="display:flex;flex-direction:column;align-items:center;cursor:pointer">${nameLabel}<div style="width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,#FF6B8A,#FF8FA6);border:2.5px solid white;box-shadow:0 2px 8px rgba(255,107,138,0.4);display:flex;align-items:center;justify-content:center;font-size:16px">🎮</div><div style="width:0;height:0;border-left:5px solid transparent;border-right:5px solid transparent;border-top:7px solid white;margin-top:-1px;filter:drop-shadow(0 2px 2px rgba(255,107,138,0.3))"></div></div>`,
-    className: '', iconSize: [32, totalH], iconAnchor: [16, totalH], popupAnchor: [0, -(totalH+4)],
+    html: `<div style="display:flex;flex-direction:column;align-items:center;cursor:pointer">${nameLabel}<img src="${imgSrc}" style="width:36px;height:36px;border-radius:28%;box-shadow:0 3px 10px rgba(0,0,0,0.25)"><div style="width:0;height:0;border-left:5px solid transparent;border-right:5px solid transparent;border-top:8px solid rgba(0,0,0,0.25);margin-top:-1px"></div></div>`,
+    className: '', iconSize: [36, totalH], iconAnchor: [18, totalH],
   });
+}
+
+function createMarkerIcon(name, locId) {
+  const rate = locationRates[locId];
+  if (rate === undefined) return buildMarkerIcon('icons/icon-192.png', name);
+  if (rate >= 60) return buildMarkerIcon('icons/28_marker_good.png', name);
+  if (rate >= 30) return buildMarkerIcon('icons/29_marker_normal.png', name);
+  return buildMarkerIcon('icons/30_marker_bad.png', name);
 }
 
 /* ════ 데이터 ════ */
@@ -1097,17 +1113,37 @@ async function loadPlaces() {
     showToast(e.message === 'timeout' ? '로딩 시간이 초과됐습니다.' : '데이터 로드 실패');
   }
   hideLoading();
+  loadReviewRates();
   db.collection('popspot_locations').onSnapshot(snap => {
     allDocs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
     renderMarkers();
   });
 }
 
+async function loadReviewRates() {
+  try {
+    const snap = await db.collection('popspot_reviews').get();
+    const counts = {};
+    snap.docs.forEach(d => {
+      const r = d.data();
+      if (!r.locationId) return;
+      if (!counts[r.locationId]) counts[r.locationId] = { total: 0, success: 0 };
+      counts[r.locationId].total++;
+      if (r.result === 'success' || r.result === 'partial') counts[r.locationId].success++;
+    });
+    locationRates = {};
+    Object.keys(counts).forEach(id => {
+      locationRates[id] = Math.round(counts[id].success / counts[id].total * 100);
+    });
+    renderMarkers();
+  } catch(e) { /* 실패 시 기본 마커 유지 */ }
+}
+
 function renderMarkers() {
   markerCluster.clearLayers(); markers = {};
   allDocs.forEach(doc => {
     if (!doc.lat || !doc.lng) return;
-    const marker = L.marker([doc.lat, doc.lng], { icon: createMarkerIcon(doc.name) });
+    const marker = L.marker([doc.lat, doc.lng], { icon: createMarkerIcon(doc.name, doc.id) });
     marker.on('click', (e) => { L.DomEvent.stopPropagation(e); openSheet(doc.id); });
     markerCluster.addLayer(marker);
     markers[doc.id] = marker;
@@ -1232,11 +1268,12 @@ async function loadReviews(docId) {
         `<img src="${url}" class="review-photo" onclick="openPhotoViewer('${url}')">`
       ).join('');
       const canEdit = currentUser && (currentUser.uid === r.uid || currentUser.email === ADMIN_EMAIL);
-      const editBtns = canEdit ? `
-        <div style="display:flex;gap:6px;margin-top:8px">
-          <button onclick="openEditReview('${r.id}')" style="padding:4px 12px;background:#FFF0F3;color:var(--coral);border:1px solid #FFD0DB;border-radius:8px;font-family:'Pretendard',sans-serif;font-size:0.78rem;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:4px"><img src="icons/23_edit_review.png" style="width:14px;height:14px;object-fit:contain"> 수정</button>
-          <button onclick="deleteReview('${r.id}')" style="padding:4px 12px;background:#FFF5F5;color:#E53935;border:1px solid #FFCDD2;border-radius:8px;font-family:'Pretendard',sans-serif;font-size:0.78rem;cursor:pointer;display:inline-flex;align-items:center;gap:4px"><img src="icons/24_delete_review.png" style="width:14px;height:14px;object-fit:contain"> 삭제</button>
-        </div>` : '';
+      const prizeChip = r.prizeName ? `
+        <span class="review-prize-chip">
+          ${r.prizeSize ? `<img src="${sizeIconSrc[r.prizeSize]||''}" style="width:14px;height:14px;object-fit:contain">` : '🧸'}
+          ${r.prizeName}
+          ${r.prizeSize ? `<span style="opacity:0.7;font-size:0.7rem">${sizeLabel[r.prizeSize]||''}</span>` : ''}
+        </span>` : '';
       return `<div class="review-card" data-review-id="${r.id}">
         <div class="review-header">
           <div class="review-avatar">${avatarHtml}</div>
@@ -1244,14 +1281,19 @@ async function loadReviews(docId) {
             <div class="review-name">${r.userName || '익명'}</div>
             <div class="review-date">${date}</div>
           </div>
-          <span class="result-badge ${r.result}"><img src="${resultIcon[r.result]||''}" style="width:16px;height:16px;object-fit:contain;vertical-align:middle;margin-right:3px">${resultLabel[r.result] || r.result}</span>
+          <span class="result-badge ${r.result}"><img src="${resultIcon[r.result]||''}" style="width:15px;height:15px;object-fit:contain">${resultLabel[r.result] || r.result}</span>
         </div>
-        <div class="review-invest">💰 ${(r.investment || 0).toLocaleString()}원 투자</div>
-        ${r.prizeName ? `<div class="review-prize">🧸 ${r.prizeName}${r.prizeSize ? ` <span style="font-size:0.75rem;background:#FFF0F3;color:var(--coral);border-radius:6px;padding:1px 7px;margin-left:4px;display:inline-flex;align-items:center;gap:3px"><img src="${sizeIconSrc[r.prizeSize]||''}" style="width:13px;height:13px;object-fit:contain"> ${sizeLabel[r.prizeSize]||''}</span>` : ''}</div>` : ''}
-        ${r.difficulty ? `<span class="difficulty-badge diff-${diffClass[r.difficulty]}"><img src="${diffIcon[r.difficulty]||''}" style="width:14px;height:14px;object-fit:contain;vertical-align:middle;margin-right:3px">${diffLabel[r.difficulty]}</span>` : ''}
-        ${r.content ? `<div class="review-content" style="margin-top:6px">${r.content}</div>` : ''}
+        <div class="review-info-row">
+          <span class="review-invest-chip">💰 ${(r.investment || 0).toLocaleString()}원</span>
+          ${prizeChip}
+        </div>
+        ${r.difficulty ? `<div class="review-tags-row"><span class="difficulty-badge diff-${diffClass[r.difficulty]}"><img src="${diffIcon[r.difficulty]||''}" style="width:13px;height:13px;object-fit:contain">${diffLabel[r.difficulty]}</span></div>` : ''}
+        ${r.content ? `<div class="review-content">${r.content}</div>` : ''}
         ${photos ? `<div class="review-photos">${photos}</div>` : ''}
-        ${editBtns}
+        ${canEdit ? `<div class="review-actions">
+          <button onclick="openEditReview('${r.id}')" style="padding:4px 12px;background:#FFF0F3;color:var(--coral);border:1px solid #FFD0DB;border-radius:8px;font-family:'Pretendard',sans-serif;font-size:0.78rem;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:4px"><img src="icons/23_edit_review.png" style="width:14px;height:14px;object-fit:contain"> 수정</button>
+          <button onclick="deleteReview('${r.id}')" style="padding:4px 12px;background:#FFF5F5;color:#E53935;border:1px solid #FFCDD2;border-radius:8px;font-family:'Pretendard',sans-serif;font-size:0.78rem;cursor:pointer;display:inline-flex;align-items:center;gap:4px"><img src="icons/24_delete_review.png" style="width:14px;height:14px;object-fit:contain"> 삭제</button>
+        </div>` : ''}
       </div>`;
     }).join('');
   } catch(e) {
@@ -1356,6 +1398,7 @@ async function submitReview() {
     showToast('✅ 후기가 등록됐습니다!');
     closeReview();
     loadReviews(currentDocId);
+    loadReviewRates();
   } catch(e) { showToast('등록 실패: ' + e.message); }
   hideLoading();
 }
@@ -1424,6 +1467,7 @@ async function deleteReview(reviewId) {
     const card = document.querySelector(`[data-review-id="${reviewId}"]`);
     if (card) card.remove();
     showToast('✅ 후기가 삭제됐습니다.');
+    loadReviewRates();
   } catch(e) { showToast('삭제 실패: ' + e.message); }
 }
 
