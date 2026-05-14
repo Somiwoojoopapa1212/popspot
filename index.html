@@ -131,7 +131,7 @@
     }
     #bottom-sheet-body { flex: 1; overflow-y: auto; min-height: 0; }
 
-    .btn-fav-sheet, .btn-share-sheet, .btn-close-sheet {
+    .btn-fav-sheet, .btn-share-sheet, .btn-close-sheet, .btn-review-sheet {
       background: #FFF0F3; border: none; border-radius: 50%;
       width: 30px; height: 30px; cursor: pointer;
       display: flex; align-items: center; justify-content: center;
@@ -585,6 +585,7 @@
   <div id="sheet-header">
     <div class="sheet-handle"></div>
     <button class="btn-fav-sheet" id="sh-fav-btn" onclick="toggleFavorite()"><img src="icons/10_favorite.png" style="width:22px;height:22px;object-fit:contain"></button>
+    <button class="btn-review-sheet" id="sh-review-btn" onclick="openReview()" style="display:none" aria-label="후기 작성"><img src="icons/09_write_review.png" style="width:22px;height:22px;object-fit:contain"></button>
     <button class="btn-share-sheet" onclick="sharePlace()" aria-label="공유"><img src="icons/11_share.png" style="width:22px;height:22px;object-fit:contain"></button>
     <button class="btn-close-sheet" onclick="closeSheet()">✕</button>
   </div>
@@ -623,9 +624,8 @@
       </div>
 
       <!-- 후기 목록 -->
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+      <div style="margin-bottom:10px">
         <span style="font-weight:800;font-size:0.95rem">📝 후기</span>
-        <button class="btn-write-review" style="width:auto;padding:7px 14px;font-size:0.8rem" onclick="openReview()"><img src="icons/09_write_review.png" style="width:16px;height:16px;object-fit:contain;vertical-align:middle;margin-right:4px">후기 작성</button>
       </div>
       <div id="sh-reviews"><div style="color:var(--text2);font-size:0.82rem;padding:8px 0">후기를 불러오는 중...</div></div>
     </div>
@@ -1170,9 +1170,10 @@ async function openSheet(docId) {
   document.getElementById('bottom-sheet').classList.add('open');
   document.getElementById('bottom-sheet-body').scrollTop = 0;
 
-  // 수정·신고 버튼 (로그인 사용자만)
+  // 수정·신고·후기작성 버튼 (로그인 사용자만)
   document.getElementById('sh-edit-bar').classList.toggle('hidden', !currentUser);
   document.getElementById('sh-report-bar').classList.toggle('hidden', !currentUser);
+  document.getElementById('sh-review-btn').style.display = currentUser ? 'flex' : 'none';
   // 즐겨찾기: Firestore 조회 전 즉시 비활성 상태로 초기화 (race condition 방지)
   currentFavorite = false;
   updateFavBtn(false);
@@ -1268,12 +1269,9 @@ async function loadReviews(docId) {
         `<img src="${url}" class="review-photo" onclick="openPhotoViewer('${url}')">`
       ).join('');
       const canEdit = currentUser && (currentUser.uid === r.uid || currentUser.email === ADMIN_EMAIL);
-      const prizeChip = r.prizeName ? `
-        <span class="review-prize-chip">
-          ${r.prizeSize ? `<img src="${sizeIconSrc[r.prizeSize]||''}" style="width:14px;height:14px;object-fit:contain">` : '🧸'}
-          ${r.prizeName}
-          ${r.prizeSize ? `<span style="opacity:0.7;font-size:0.7rem">${sizeLabel[r.prizeSize]||''}</span>` : ''}
-        </span>` : '';
+      // 공통 행 스타일: 아이콘(20px) + 분류(회색) + 설명 순서로 들여쓰기 통일
+      const rowStyle = 'display:flex;align-items:center;gap:6px;font-size:0.82rem;margin-bottom:5px';
+      const labelStyle = 'color:var(--text2);font-size:0.75rem;min-width:2.5em';
       return `<div class="review-card" data-review-id="${r.id}">
         <div class="review-header">
           <div class="review-avatar">${avatarHtml}</div>
@@ -1283,12 +1281,22 @@ async function loadReviews(docId) {
           </div>
           <span class="result-badge ${r.result}"><img src="${resultIcon[r.result]||''}" style="width:15px;height:15px;object-fit:contain">${resultLabel[r.result] || r.result}</span>
         </div>
-        <div class="review-info-row">
-          <span class="review-invest-chip">💰 ${(r.investment || 0).toLocaleString()}원</span>
-          ${prizeChip}
+        <div style="${rowStyle}">
+          <img src="icons/31_money.png" style="width:20px;height:20px;object-fit:contain;flex-shrink:0">
+          <span style="${labelStyle}">투자</span>
+          <span style="font-weight:700;color:var(--coral)">${(r.investment || 0).toLocaleString()}원</span>
         </div>
-        ${r.difficulty ? `<div class="review-tags-row"><span class="difficulty-badge diff-${diffClass[r.difficulty]}"><img src="${diffIcon[r.difficulty]||''}" style="width:13px;height:13px;object-fit:contain">${diffLabel[r.difficulty]}</span></div>` : ''}
-        ${r.content ? `<div class="review-content">${r.content}</div>` : ''}
+        ${r.prizeName ? `<div style="${rowStyle}">
+          <img src="${r.prizeSize ? sizeIconSrc[r.prizeSize] : 'icons/09_write_review.png'}" style="width:20px;height:20px;object-fit:contain;flex-shrink:0">
+          <span style="${labelStyle}">${r.prizeSize ? sizeLabel[r.prizeSize] : '인형'}</span>
+          <span style="color:var(--text);font-weight:600">${r.prizeName}</span>
+        </div>` : ''}
+        ${r.difficulty ? `<div style="${rowStyle}">
+          <img src="${diffIcon[r.difficulty]||''}" style="width:20px;height:20px;object-fit:contain;flex-shrink:0">
+          <span style="${labelStyle}">난이도</span>
+          <span class="difficulty-badge diff-${diffClass[r.difficulty]}" style="margin:0">${diffLabel[r.difficulty]}</span>
+        </div>` : ''}
+        ${r.content ? `<div style="font-size:0.82rem;color:var(--text2);line-height:1.55;padding:6px 0 2px;border-top:1px solid #FFE8ED;margin-top:4px">${r.content}</div>` : ''}
         ${photos ? `<div class="review-photos">${photos}</div>` : ''}
         ${canEdit ? `<div class="review-actions">
           <button onclick="openEditReview('${r.id}')" style="padding:4px 12px;background:#FFF0F3;color:var(--coral);border:1px solid #FFD0DB;border-radius:8px;font-family:'Pretendard',sans-serif;font-size:0.78rem;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:4px"><img src="icons/23_edit_review.png" style="width:14px;height:14px;object-fit:contain"> 수정</button>
