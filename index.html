@@ -1083,24 +1083,25 @@ function initMap() {
 
 let locationRates = {}; // { locationId: successRate(0-100) }
 
-function buildMarkerIcon(imgSrc, name) {
+function buildMarkerIcon(imgSrc, name, tipColor) {
   const shortName = name ? (name.length > 9 ? name.slice(0, 9) + '…' : name) : '';
   const nameLabel = shortName
     ? `<div style="background:rgba(38,50,56,0.75);backdrop-filter:blur(3px);border-radius:6px;padding:2px 7px;font-size:10px;font-weight:700;color:white;white-space:nowrap;box-shadow:0 1px 6px rgba(0,0,0,0.2);margin-bottom:3px;font-family:'Pretendard',sans-serif">${shortName}</div>`
     : '';
   const totalH = 36 + 8 + (shortName ? 20 : 0);
+  const tip = tipColor || '#FF6B8A';
   return L.divIcon({
-    html: `<div style="display:flex;flex-direction:column;align-items:center;cursor:pointer">${nameLabel}<img src="${imgSrc}" style="width:36px;height:36px;border-radius:28%;box-shadow:0 3px 10px rgba(0,0,0,0.25)"><div style="width:0;height:0;border-left:5px solid transparent;border-right:5px solid transparent;border-top:8px solid rgba(0,0,0,0.25);margin-top:-1px"></div></div>`,
+    html: `<div style="display:flex;flex-direction:column;align-items:center;cursor:pointer">${nameLabel}<img src="${imgSrc}" style="width:36px;height:36px;border-radius:28%;box-shadow:0 3px 10px rgba(0,0,0,0.25)"><div style="width:0;height:0;border-left:5px solid transparent;border-right:5px solid transparent;border-top:8px solid ${tip};margin-top:-1px"></div></div>`,
     className: '', iconSize: [36, totalH], iconAnchor: [18, totalH],
   });
 }
 
 function createMarkerIcon(name, locId) {
   const rate = locationRates[locId];
-  if (rate === undefined) return buildMarkerIcon('icons/icon-192.png', name);
-  if (rate >= 60) return buildMarkerIcon('icons/28_marker_good.png', name);
-  if (rate >= 30) return buildMarkerIcon('icons/29_marker_normal.png', name);
-  return buildMarkerIcon('icons/30_marker_bad.png', name);
+  if (rate === undefined) return buildMarkerIcon('icons/icon-192.png', name, '#FF6B8A');
+  if (rate >= 60) return buildMarkerIcon('icons/28_marker_good.png', name, '#4CAF50');
+  if (rate >= 30) return buildMarkerIcon('icons/29_marker_normal.png', name, '#FFB300');
+  return buildMarkerIcon('icons/30_marker_bad.png', name, '#90A4AE');
 }
 
 /* ════ 데이터 ════ */
