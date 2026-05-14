@@ -777,6 +777,13 @@
     <div class="form-section" id="prize-section">
       <label class="form-label">뽑은 인형 <span style="font-size:0.75rem;opacity:0.7">(성공/아슬아슬 시)</span></label>
       <input type="text" id="review-prize" class="form-input" placeholder="예: 산리오 시나모롤 인형">
+      <label class="form-label" style="margin-top:10px">인형 크기 <span style="font-size:0.75rem;opacity:0.7">(선택사항)</span></label>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <div class="diff-opt" id="size-large"  data-size="large"  onclick="selectSize('large')" >🐻 대형</div>
+        <div class="diff-opt" id="size-medium" data-size="medium" onclick="selectSize('medium')">🐰 중형</div>
+        <div class="diff-opt" id="size-small"  data-size="small"  onclick="selectSize('small')" >🐹 소형</div>
+        <div class="diff-opt" id="size-mini"   data-size="mini"   onclick="selectSize('mini')"  >🪆 소품</div>
+      </div>
     </div>
 
     <div class="form-section">
@@ -838,7 +845,7 @@ const ADMIN_EMAIL    = 'shuttle1207@gmail.com';
 let map, markerCluster, currentUser = null, allDocs = [], markers = {};
 let currentDocId = null, currentFavorite = false, selectedPlace = null;
 let appInitialized = false, searchTimer = null;
-let reviewPhotos = [], formResult = '', formDiff = '', formMode = 'add';
+let reviewPhotos = [], formResult = '', formDiff = '', formSize = '', formMode = 'add';
 
 /* ════ 스플래시 타임아웃 ════ */
 const _splashTimeout = setTimeout(() => {
@@ -1191,6 +1198,8 @@ async function loadReviews(docId) {
     const resultLabel = { success:'성공', partial:'아슬아슬', fail:'실패' };
     const diffIcon    = { easy:'icons/04_easy.png', normal:'icons/05_normal.png', hard:'icons/06_hard.png' };
     const diffLabel   = { easy:'쉬움', normal:'보통', hard:'어려움' };
+    const sizeLabel   = { large:'대형', medium:'중형', small:'소형', mini:'소품' };
+    const sizeEmoji   = { large:'🐻', medium:'🐰', small:'🐹', mini:'🪆' };
     const diffClass   = { easy:'easy', normal:'normal', hard:'hard' };
 
     container.innerHTML = reviews.map(r => {
@@ -1217,7 +1226,7 @@ async function loadReviews(docId) {
           <span class="result-badge ${r.result}"><img src="${resultIcon[r.result]||''}" style="width:16px;height:16px;object-fit:contain;vertical-align:middle;margin-right:3px">${resultLabel[r.result] || r.result}</span>
         </div>
         <div class="review-invest">💰 ${(r.investment || 0).toLocaleString()}원 투자</div>
-        ${r.prizeName ? `<div class="review-prize">🧸 ${r.prizeName}</div>` : ''}
+        ${r.prizeName ? `<div class="review-prize">🧸 ${r.prizeName}${r.prizeSize ? ` <span style="font-size:0.75rem;background:#FFF0F3;color:var(--coral);border-radius:6px;padding:1px 7px;margin-left:4px">${sizeEmoji[r.prizeSize]||''} ${sizeLabel[r.prizeSize]||''}</span>` : ''}</div>` : ''}
         ${r.difficulty ? `<span class="difficulty-badge diff-${diffClass[r.difficulty]}"><img src="${diffIcon[r.difficulty]||''}" style="width:14px;height:14px;object-fit:contain;vertical-align:middle;margin-right:3px">${diffLabel[r.difficulty]}</span>` : ''}
         ${r.content ? `<div class="review-content" style="margin-top:6px">${r.content}</div>` : ''}
         ${photos ? `<div class="review-photos">${photos}</div>` : ''}
@@ -1241,7 +1250,8 @@ function openReview() {
   document.querySelectorAll('.diff-opt').forEach(el => el.classList.remove('active'));
   reviewPhotos = [];
   renderPhotoGrid();
-  formResult = ''; formDiff = '';
+  formResult = ''; formDiff = ''; formSize = '';
+  document.querySelectorAll('.diff-opt[data-size]').forEach(el => el.classList.remove('active'));
   document.getElementById('review-overlay').classList.add('open');
   document.querySelector('#review-overlay .form-body').scrollTop = 0;
 }
@@ -1264,8 +1274,14 @@ function selectResult(val) {
 
 function selectDiff(val) {
   formDiff = val;
-  document.querySelectorAll('.diff-opt').forEach(el => el.classList.remove('active'));
+  document.querySelectorAll('.diff-opt[data-val]').forEach(el => el.classList.remove('active'));
   document.querySelector(`.diff-opt[data-val="${val}"]`)?.classList.add('active');
+}
+
+function selectSize(val) {
+  formSize = formSize === val ? '' : val; // 토글
+  document.querySelectorAll('.diff-opt[data-size]').forEach(el => el.classList.remove('active'));
+  if (formSize) document.querySelector(`.diff-opt[data-size="${formSize}"]`)?.classList.add('active');
 }
 
 function handlePhotoSelect(input) {
@@ -1310,6 +1326,7 @@ async function submitReview() {
       result:      formResult,
       investment:  invest,
       prizeName:   document.getElementById('review-prize').value.trim() || null,
+      prizeSize:   formSize || null,
       difficulty:  formDiff || null,
       content:     document.getElementById('review-content').value.trim() || null,
       photoUrls,
@@ -1336,6 +1353,7 @@ function openEditReview(reviewId) {
   selectDiff(r.difficulty || '');
   document.getElementById('review-invest').value = r.investment || '';
   document.getElementById('review-prize').value = r.prizeName || '';
+  selectSize(r.prizeSize || '');
   document.getElementById('review-content').value = r.content || '';
   reviewPhotos = [];
   document.getElementById('review-photos-preview').innerHTML = '';
@@ -1356,6 +1374,7 @@ async function saveEditReview() {
       result:     formResult,
       investment: invest,
       prizeName:  document.getElementById('review-prize').value.trim() || null,
+      prizeSize:  formSize || null,
       difficulty: formDiff || null,
       content:    document.getElementById('review-content').value.trim() || null,
     };
@@ -1797,11 +1816,21 @@ function goHome() {
 
 /* ════ 사진 뷰어 ════ */
 function openPhotoViewer(url) {
-  const ov = document.createElement('div');
-  ov.style = 'position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.9);display:flex;align-items:center;justify-content:center';
-  ov.onclick = () => ov.remove();
-  ov.innerHTML = `<img src="${url}" style="max-width:95vw;max-height:95vh;object-fit:contain;border-radius:8px">`;
-  document.body.appendChild(ov);
+  let ov = document.getElementById('photo-viewer-overlay');
+  if (!ov) {
+    ov = document.createElement('div');
+    ov.id = 'photo-viewer-overlay';
+    ov.style = 'position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.9);display:none;align-items:center;justify-content:center';
+    ov.innerHTML = '<img id="photo-viewer-img" style="max-width:95vw;max-height:95vh;object-fit:contain;border-radius:8px">';
+    ov.onclick = closePhotoViewer;
+    document.body.appendChild(ov);
+  }
+  document.getElementById('photo-viewer-img').src = url;
+  ov.style.display = 'flex';
+}
+function closePhotoViewer() {
+  const ov = document.getElementById('photo-viewer-overlay');
+  if (ov) ov.style.display = 'none';
 }
 
 /* ════ 유틸 ════ */
@@ -1871,6 +1900,8 @@ function hideLoading() { document.getElementById('loading').classList.add('hidde
   let exitReady = false, exitTimer = null, skipping = false;
   function isOpen(id) { const el = document.getElementById(id); return el && (el.classList.contains('open') || el.style.display === 'flex'); }
   function tryCloseUI() {
+    const pv = document.getElementById('photo-viewer-overlay');
+    if (pv && pv.style.display === 'flex') { closePhotoViewer(); return true; }
     if (isOpen('admin-overlay'))     { closeAdmin();     return true; }
     if (isOpen('report-overlay'))    { closeReport();    return true; }
     if (isOpen('menu-drawer'))       { closeMenu();      return true; }
