@@ -777,12 +777,13 @@
     <div class="form-section" id="prize-section">
       <label class="form-label">뽑은 인형 <span style="font-size:0.75rem;opacity:0.7">(성공/아슬아슬 시)</span></label>
       <input type="text" id="review-prize" class="form-input" placeholder="예: 산리오 시나모롤 인형">
-      <label class="form-label" style="margin-top:10px">인형 크기 <span style="font-size:0.75rem;opacity:0.7">(선택사항)</span></label>
+      <label class="form-label" style="margin-top:10px">뽑기 종류 <span style="font-size:0.75rem;opacity:0.7">(선택사항)</span></label>
       <div style="display:flex;gap:8px;flex-wrap:wrap">
         <div class="diff-opt" id="size-large"  data-size="large"  onclick="selectSize('large')" >🐻 대형</div>
         <div class="diff-opt" id="size-medium" data-size="medium" onclick="selectSize('medium')">🐰 중형</div>
         <div class="diff-opt" id="size-small"  data-size="small"  onclick="selectSize('small')" >🐹 소형</div>
         <div class="diff-opt" id="size-mini"   data-size="mini"   onclick="selectSize('mini')"  >🪆 소품</div>
+        <div class="diff-opt" id="size-figure" data-size="figure" onclick="selectSize('figure')">🗿 피규어</div>
       </div>
     </div>
 
@@ -1198,8 +1199,8 @@ async function loadReviews(docId) {
     const resultLabel = { success:'성공', partial:'아슬아슬', fail:'실패' };
     const diffIcon    = { easy:'icons/04_easy.png', normal:'icons/05_normal.png', hard:'icons/06_hard.png' };
     const diffLabel   = { easy:'쉬움', normal:'보통', hard:'어려움' };
-    const sizeLabel   = { large:'대형', medium:'중형', small:'소형', mini:'소품' };
-    const sizeEmoji   = { large:'🐻', medium:'🐰', small:'🐹', mini:'🪆' };
+    const sizeLabel   = { large:'대형', medium:'중형', small:'소형', mini:'소품', figure:'피규어' };
+    const sizeEmoji   = { large:'🐻', medium:'🐰', small:'🐹', mini:'🪆', figure:'🗿' };
     const diffClass   = { easy:'easy', normal:'normal', hard:'hard' };
 
     container.innerHTML = reviews.map(r => {
