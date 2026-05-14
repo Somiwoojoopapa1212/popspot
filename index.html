@@ -266,6 +266,7 @@
       text-align: center; cursor: pointer; font-size: 0.82rem; color: var(--text2);
       transition: all 0.15s; background: white;
     }
+    .diff-opt.active         { background: #FFF0F3; border-color: var(--coral);   color: var(--coral);   font-weight: 700; }
     .diff-opt.active.easy   { background: #E8F5E9; border-color: var(--success); color: var(--success); font-weight: 700; }
     .diff-opt.active.normal { background: #FFF3E0; border-color: var(--partial); color: var(--partial); font-weight: 700; }
     .diff-opt.active.hard   { background: #FFEBEE; border-color: var(--fail);    color: var(--fail);    font-weight: 700; }
@@ -778,12 +779,12 @@
       <label class="form-label">뽑은 인형 <span style="font-size:0.75rem;opacity:0.7">(성공/아슬아슬 시)</span></label>
       <input type="text" id="review-prize" class="form-input" placeholder="예: 산리오 시나모롤 인형">
       <label class="form-label" style="margin-top:10px">뽑기 종류 <span style="font-size:0.75rem;opacity:0.7">(선택사항)</span></label>
-      <div style="display:flex;gap:8px;flex-wrap:wrap">
-        <div class="diff-opt" id="size-large"  data-size="large"  onclick="selectSize('large')" ><img src="icons/16_large.png"  style="width:24px;height:24px;object-fit:contain;vertical-align:middle;margin-right:4px"> 대형</div>
-        <div class="diff-opt" id="size-medium" data-size="medium" onclick="selectSize('medium')"><img src="icons/17_medium.png" style="width:24px;height:24px;object-fit:contain;vertical-align:middle;margin-right:4px"> 중형</div>
-        <div class="diff-opt" id="size-small"  data-size="small"  onclick="selectSize('small')" ><img src="icons/18_small.png"  style="width:24px;height:24px;object-fit:contain;vertical-align:middle;margin-right:4px"> 소형</div>
-        <div class="diff-opt" id="size-mini"   data-size="mini"   onclick="selectSize('mini')"  ><img src="icons/19_mini.png"   style="width:24px;height:24px;object-fit:contain;vertical-align:middle;margin-right:4px"> 소품</div>
-        <div class="diff-opt" id="size-figure" data-size="figure" onclick="selectSize('figure')"><img src="icons/20_figure.png" style="width:24px;height:24px;object-fit:contain;vertical-align:middle;margin-right:4px"> 피규어</div>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px">
+        <div class="diff-opt" id="size-large"  data-size="large"  onclick="selectSize('large')" style="justify-content:center"><img src="icons/16_large.png"  style="width:22px;height:22px;object-fit:contain;margin-right:4px"> 대형</div>
+        <div class="diff-opt" id="size-medium" data-size="medium" onclick="selectSize('medium')" style="justify-content:center"><img src="icons/17_medium.png" style="width:22px;height:22px;object-fit:contain;margin-right:4px"> 중형</div>
+        <div class="diff-opt" id="size-small"  data-size="small"  onclick="selectSize('small')" style="justify-content:center"><img src="icons/18_small.png"  style="width:22px;height:22px;object-fit:contain;margin-right:4px"> 소형</div>
+        <div class="diff-opt" id="size-mini"   data-size="mini"   onclick="selectSize('mini')" style="grid-column:1/2;justify-content:center"><img src="icons/19_mini.png"   style="width:22px;height:22px;object-fit:contain;margin-right:4px"> 소품</div>
+        <div class="diff-opt" id="size-figure" data-size="figure" onclick="selectSize('figure')" style="grid-column:2/3;justify-content:center"><img src="icons/20_figure.png" style="width:22px;height:22px;object-fit:contain;margin-right:4px"> 피규어</div>
       </div>
     </div>
 
@@ -1156,15 +1157,18 @@ async function toggleFavorite() {
   if (!currentDocId || !currentUser) return;
   const ref = db.collection('popspot_favorites').doc(`${currentUser.uid}_${currentDocId}`);
   if (currentFavorite) {
-    await ref.delete();
     currentFavorite = false;
-    updateFavBtn(false);
+    updateFavBtn(false);                // 즉시 반영
     showToast('즐겨찾기에서 제거됐습니다.');
+    await ref.delete().catch(() => {    // 실패 시 롤백
+      currentFavorite = true; updateFavBtn(true);
+    });
   } else {
-    await ref.set({ uid: currentUser.uid, placeId: currentDocId, addedAt: firebase.firestore.FieldValue.serverTimestamp() });
     currentFavorite = true;
-    updateFavBtn(true);
+    updateFavBtn(true);                 // 즉시 반영
     showToast('⭐ 즐겨찾기에 추가됐습니다!');
+    await ref.set({ uid: currentUser.uid, placeId: currentDocId, addedAt: firebase.firestore.FieldValue.serverTimestamp() })
+      .catch(() => { currentFavorite = false; updateFavBtn(false); }); // 실패 시 롤백
   }
 }
 
