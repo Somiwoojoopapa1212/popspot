@@ -1172,6 +1172,7 @@ async function loadReviews(docId) {
     const reviews = snap.docs.map(d => ({ id: d.id, ...d.data() }))
       .sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0))
       .slice(0, 20);
+    allReviewsCache = reviews;
     const total   = reviews.length;
     const success = reviews.filter(r => r.result === 'success' || r.result === 'partial').length;
     const rate    = total > 0 ? Math.round((success / total) * 100) : null;
@@ -1203,7 +1204,13 @@ async function loadReviews(docId) {
       const photos = (r.photoUrls || []).map(url =>
         `<img src="${url}" class="review-photo" onclick="openPhotoViewer('${url}')">`
       ).join('');
-      return `<div class="review-card">
+      const canEdit = currentUser && (currentUser.uid === r.uid || currentUser.email === ADMIN_EMAIL);
+      const editBtns = canEdit ? `
+        <div style="display:flex;gap:6px;margin-top:8px">
+          <button onclick="openEditReview('${r.id}')" style="padding:4px 12px;background:#FFF0F3;color:var(--coral);border:1px solid #FFD0DB;border-radius:8px;font-family:'Pretendard',sans-serif;font-size:0.78rem;font-weight:700;cursor:pointer">수정</button>
+          <button onclick="deleteReview('${r.id}')" style="padding:4px 12px;background:#FFF5F5;color:#E53935;border:1px solid #FFCDD2;border-radius:8px;font-family:'Pretendard',sans-serif;font-size:0.78rem;cursor:pointer">삭제</button>
+        </div>` : '';
+      return `<div class="review-card" data-review-id="${r.id}">
         <div class="review-header">
           <div class="review-avatar">${avatarHtml}</div>
           <div class="review-meta">
@@ -1217,6 +1224,7 @@ async function loadReviews(docId) {
         ${r.difficulty ? `<span class="difficulty-badge diff-${diffClass[r.difficulty]}"><img src="${diffIcon[r.difficulty]||''}" style="width:14px;height:14px;object-fit:contain;vertical-align:middle;margin-right:3px">${diffLabel[r.difficulty]}</span>` : ''}
         ${r.content ? `<div class="review-content" style="margin-top:6px">${r.content}</div>` : ''}
         ${photos ? `<div class="review-photos">${photos}</div>` : ''}
+        ${editBtns}
       </div>`;
     }).join('');
   } catch(e) {
@@ -1241,7 +1249,14 @@ function openReview() {
   document.querySelector('#review-overlay .form-body').scrollTop = 0;
 }
 
-function closeReview() { document.getElementById('review-overlay').classList.remove('open'); }
+function closeReview() {
+  document.getElementById('review-overlay').classList.remove('open');
+  // 수정 모드 초기화
+  editingReviewId = null;
+  document.querySelector('#review-overlay h2').textContent = '후기 작성';
+  const submitBtn = document.querySelector('#review-overlay .btn-submit');
+  if (submitBtn) { submitBtn.textContent = '후기 등록'; submitBtn.onclick = submitReview; }
+}
 
 function selectResult(val) {
   formResult = val;
@@ -1308,6 +1323,71 @@ async function submitReview() {
     loadReviews(currentDocId);
   } catch(e) { showToast('등록 실패: ' + e.message); }
   hideLoading();
+}
+
+/* ════ 후기 수정/삭제 ════ */
+let editingReviewId = null;
+let allReviewsCache = [];
+
+function openEditReview(reviewId) {
+  const r = allReviewsCache.find(x => x.id === reviewId);
+  if (!r) return;
+  editingReviewId = reviewId;
+  // 후기 작성 오버레이 재사용 — 기존 값으로 채워서 열기
+  document.getElementById('review-place-name').textContent = allDocs.find(d => d.id === r.locationId)?.name || '';
+  selectResult(r.result || '');
+  selectDiff(r.difficulty || '');
+  document.getElementById('review-invest').value = r.investment || '';
+  document.getElementById('review-prize').value = r.prizeName || '';
+  document.getElementById('review-content').value = r.content || '';
+  reviewPhotos = [];
+  document.getElementById('review-photos-preview').innerHTML = '';
+  document.querySelector('#review-overlay h2').textContent = '후기 수정';
+  document.querySelector('#review-overlay .btn-submit').textContent = '수정하기';
+  document.querySelector('#review-overlay .btn-submit').onclick = saveEditReview;
+  document.getElementById('review-overlay').classList.add('open');
+  document.querySelector('#review-overlay .form-body').scrollTop = 0;
+}
+
+async function saveEditReview() {
+  if (!editingReviewId) return;
+  if (!formResult) { showToast('결과를 선택해주세요.'); return; }
+  showLoading();
+  try {
+    const invest = parseInt(document.getElementById('review-invest').value) || 0;
+    const updateData = {
+      result:     formResult,
+      investment: invest,
+      prizeName:  document.getElementById('review-prize').value.trim() || null,
+      difficulty: formDiff || null,
+      content:    document.getElementById('review-content').value.trim() || null,
+    };
+    // 새 사진이 있으면 업로드
+    if (reviewPhotos.length > 0) {
+      const photoUrls = [];
+      for (const f of reviewPhotos) {
+        const ref = storage.ref(`popspot/reviews/${currentDocId}/${Date.now()}_${f.name}`);
+        await ref.put(f);
+        photoUrls.push(await ref.getDownloadURL());
+      }
+      updateData.photoUrls = photoUrls;
+    }
+    await db.collection('popspot_reviews').doc(editingReviewId).update(updateData);
+    showToast('✅ 후기가 수정됐습니다!');
+    closeReview();
+    loadReviews(currentDocId);
+  } catch(e) { showToast('수정 실패: ' + e.message); }
+  hideLoading();
+}
+
+async function deleteReview(reviewId) {
+  if (!confirm('후기를 삭제하시겠어요?')) return;
+  try {
+    await db.collection('popspot_reviews').doc(reviewId).delete();
+    const card = document.querySelector(`[data-review-id="${reviewId}"]`);
+    if (card) card.remove();
+    showToast('✅ 후기가 삭제됐습니다.');
+  } catch(e) { showToast('삭제 실패: ' + e.message); }
 }
 
 /* ════ 지점 등록 ════ */
@@ -1425,11 +1505,14 @@ function selectFromSearch(idx) {
 
 function selectForAddDirect(idx) {
   const r = window._searchResults.data[idx];
+  const needNameInput = searchTab === 'address';
   selectedPlace = {
-    name: r.place_name,
+    name: needNameInput ? '' : r.place_name,
     address: r.road_address_name || r.address_name,
     lat: parseFloat(r.y), lng: parseFloat(r.x),
-    kakaoId: r.id, phone: r.phone || '', category: r.category_name || '',
+    kakaoId: needNameInput ? null : r.id,
+    phone: r.phone || '', category: r.category_name || '',
+    needNameInput,
   };
   closeSearch();
   openFormForAdd();
