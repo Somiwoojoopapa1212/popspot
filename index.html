@@ -70,10 +70,9 @@
     }
     .search-bar .search-placeholder { color: rgba(255,255,255,0.85); font-size: 0.85rem; }
     .hamburger-btn {
-      width: 36px; height: 36px; border-radius: 10px; border: none;
-      background: rgba(255,255,255,0.2); color: white; font-size: 1.1rem;
+      width: 36px; height: 36px; border: none; background: none;
       cursor: pointer; display: flex; align-items: center; justify-content: center;
-      position: relative;
+      position: relative; padding: 0;
     }
 
     /* ══ 필터 바 ══ */
@@ -557,7 +556,7 @@
     <span>🔍</span>
     <span class="search-placeholder">지점 검색...</span>
   </div>
-  <button class="hamburger-btn" onclick="openMenu()"><img src="icons/12_menu.png" style="width:22px;height:22px;object-fit:contain;vertical-align:middle"></button>
+  <button class="hamburger-btn" onclick="openMenu()"><img src="icons/12_menu.png" style="width:32px;height:32px;object-fit:contain"></button>
 </div>
 
 <!-- 필터 바 -->
@@ -606,7 +605,7 @@
 
       <!-- 성공률 바 -->
       <div class="success-rate-bar" id="sh-rate-bar">
-        <div class="success-rate-title">🎯 뽑기 성공률</div>
+        <div class="success-rate-title">뽑기 성공률</div>
         <div class="rate-row">
           <div class="rate-track"><div class="rate-fill" id="sh-rate-fill" style="width:0%"></div></div>
           <div class="rate-text" id="sh-rate-text">-</div>
@@ -628,7 +627,7 @@
 
       <!-- 후기 목록 -->
       <div style="margin-bottom:10px">
-        <span style="font-weight:800;font-size:0.95rem">📝 후기</span>
+        <span style="font-weight:800;font-size:0.95rem">후기</span>
       </div>
       <div id="sh-reviews"><div style="color:var(--text2);font-size:0.82rem;padding:8px 0">후기를 불러오는 중...</div></div>
     </div>
@@ -695,7 +694,7 @@
 <div id="recent-reviews-overlay" style="display:none;position:fixed;inset:0;z-index:2500;background:var(--bg);flex-direction:column">
   <div style="background:var(--card);padding:14px 16px;display:flex;align-items:center;gap:12px;border-bottom:1px solid #FFE8ED;flex-shrink:0">
     <button onclick="closeRecentReviews()" style="background:none;border:none;font-size:1.3rem;cursor:pointer;color:var(--text2)">←</button>
-    <span style="font-weight:800;font-size:1rem;color:var(--text)">📝 최근 후기</span>
+    <span style="font-weight:800;font-size:1rem;color:var(--text);display:flex;align-items:center;gap:6px"><img src="icons/09_write_review.png" style="width:22px;height:22px;object-fit:contain"> 최근 후기</span>
   </div>
   <div id="recent-reviews-list" style="flex:1;overflow-y:auto;padding:16px"></div>
 </div>
@@ -1866,7 +1865,7 @@ async function loadRecentReviews() {
       const loc = allDocs.find(d => d.id === r.locationId);
       const date = r.createdAt?.toDate?.()?.toLocaleDateString('ko-KR') || '';
       const avatarHtml = r.photoUrl ? `<img src="${r.photoUrl}" style="width:32px;height:32px;border-radius:50%;object-fit:cover">` : `<div style="width:32px;height:32px;border-radius:50%;background:var(--coral);display:flex;align-items:center;justify-content:center;color:white;font-size:0.85rem;font-weight:700">${r.userName?.[0]||'?'}</div>`;
-      return `<div class="review-card" onclick="closeRecentReviews();goToPlace('${r.locationId}')" style="cursor:pointer">
+      return `<div class="review-card" onclick="closeRecentReviews();goToPlaceAndReview('${r.locationId}','${doc.id}')" style="cursor:pointer">
         <div style="font-size:0.78rem;color:var(--coral);font-weight:700;margin-bottom:6px">📍 ${loc?.name || '알 수 없는 지점'}</div>
         <div class="review-header">
           <div class="review-avatar">${avatarHtml}</div>
@@ -1902,6 +1901,27 @@ function goToPlace(id) {
   if (!doc?.lat) return;
   map.setView([doc.lat, doc.lng], 16);
   setTimeout(() => openSheet(id), 350);
+}
+
+function goToPlaceAndReview(locId, reviewId) {
+  const doc = allDocs.find(d => d.id === locId);
+  if (!doc?.lat) return;
+  map.setView([doc.lat, doc.lng], 16);
+  setTimeout(() => {
+    openSheet(locId);
+    // 시트 오픈 + 후기 로드 후 해당 카드로 스크롤
+    const tryScroll = (attempts) => {
+      const card = document.querySelector(`[data-review-id="${reviewId}"]`);
+      if (card) {
+        card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        card.style.outline = '2px solid var(--coral)';
+        setTimeout(() => { card.style.outline = ''; }, 1500);
+      } else if (attempts > 0) {
+        setTimeout(() => tryScroll(attempts - 1), 300);
+      }
+    };
+    setTimeout(() => tryScroll(8), 600);
+  }, 350);
 }
 
 /* ════ 메뉴 ════ */
