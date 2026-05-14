@@ -1860,6 +1860,10 @@ async function loadRecentReviews() {
     if (snap.empty) { container.innerHTML = '<div style="color:var(--text2);text-align:center;padding:20px">아직 후기가 없습니다.</div>'; return; }
     const resultIcon  = { success:'icons/01_success.png', partial:'icons/02_partial.png', fail:'icons/03_fail.png' };
     const resultLabel = { success:'성공', partial:'아슬아슬', fail:'실패' };
+    const sizeIconSrc = { large:'icons/16_large.png', medium:'icons/17_medium.png', small:'icons/18_small.png', mini:'icons/19_mini.png', figure:'icons/20_figure.png' };
+    const sizeLabel   = { large:'대형', medium:'중형', small:'소형', mini:'소품', figure:'피규어' };
+    const rowStyle    = 'display:flex;align-items:center;gap:6px;font-size:0.82rem;margin-bottom:5px';
+    const labelStyle  = 'color:var(--text2);font-size:0.75rem;min-width:2.5em';
     container.innerHTML = snap.docs.map(doc => {
       const r = doc.data();
       const loc = allDocs.find(d => d.id === r.locationId);
@@ -1873,11 +1877,19 @@ async function loadRecentReviews() {
             <div class="review-name">${r.userName||'익명'}</div>
             <div class="review-date">${date}</div>
           </div>
-          <span class="result-badge ${r.result}"><img src="${resultIcon[r.result]||''}" style="width:14px;height:14px;object-fit:contain;vertical-align:middle;margin-right:3px">${resultLabel[r.result]||r.result}</span>
+          <span class="result-badge ${r.result}"><img src="${resultIcon[r.result]||''}" style="width:14px;height:14px;object-fit:contain">${resultLabel[r.result]||r.result}</span>
         </div>
-        <div class="review-invest">💰 ${(r.investment||0).toLocaleString()}원</div>
-        ${r.prizeName ? `<div class="review-prize">🧸 ${r.prizeName}</div>` : ''}
-        ${r.content ? `<div class="review-content" style="margin-top:4px">${r.content}</div>` : ''}
+        <div style="${rowStyle}">
+          <img src="icons/31_money.png" style="width:20px;height:20px;object-fit:contain;flex-shrink:0">
+          <span style="${labelStyle}">투자</span>
+          <span style="font-weight:700;color:var(--coral)">${(r.investment||0).toLocaleString()}원</span>
+        </div>
+        ${r.prizeName ? `<div style="${rowStyle}">
+          <img src="${r.prizeSize ? sizeIconSrc[r.prizeSize] : 'icons/09_write_review.png'}" style="width:20px;height:20px;object-fit:contain;flex-shrink:0">
+          <span style="${labelStyle}">${r.prizeSize ? sizeLabel[r.prizeSize] : '인형'}</span>
+          <span style="color:var(--text);font-weight:600">${r.prizeName}</span>
+        </div>` : ''}
+        ${r.content ? `<div style="font-size:0.82rem;color:var(--text2);line-height:1.55;padding:6px 0 2px;border-top:1px solid #FFE8ED;margin-top:4px">${r.content}</div>` : ''}
       </div>`;
     }).join('');
   } catch(e) { container.innerHTML = `<div style="color:#E53935;text-align:center;padding:20px">불러오기 실패: ${e.message}</div>`; }
