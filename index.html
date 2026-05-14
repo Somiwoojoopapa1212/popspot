@@ -48,7 +48,9 @@
     }
     * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
     .hidden { display: none !important; }
-    body { font-family: 'Pretendard', sans-serif; background: var(--bg); color: var(--text); height: 100vh; overflow: hidden; }
+    body { font-family: 'Pretendard', sans-serif; font-weight: 400; background: var(--bg); color: var(--text); height: 100vh; overflow: hidden; }
+    /* 앱 아이콘 공통: 둥근 모서리, 배경 불필요 시 overflow clip */
+    img[src^="icons/"] { border-radius: 22%; display: inline-block; vertical-align: middle; }
 
     /* ══ 헤더 ══ */
     #header {
