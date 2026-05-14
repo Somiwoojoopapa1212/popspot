@@ -779,11 +779,11 @@
       <input type="text" id="review-prize" class="form-input" placeholder="예: 산리오 시나모롤 인형">
       <label class="form-label" style="margin-top:10px">뽑기 종류 <span style="font-size:0.75rem;opacity:0.7">(선택사항)</span></label>
       <div style="display:flex;gap:8px;flex-wrap:wrap">
-        <div class="diff-opt" id="size-large"  data-size="large"  onclick="selectSize('large')" >🐻 대형</div>
-        <div class="diff-opt" id="size-medium" data-size="medium" onclick="selectSize('medium')">🐰 중형</div>
-        <div class="diff-opt" id="size-small"  data-size="small"  onclick="selectSize('small')" >🐹 소형</div>
-        <div class="diff-opt" id="size-mini"   data-size="mini"   onclick="selectSize('mini')"  >🪆 소품</div>
-        <div class="diff-opt" id="size-figure" data-size="figure" onclick="selectSize('figure')">🗿 피규어</div>
+        <div class="diff-opt" id="size-large"  data-size="large"  onclick="selectSize('large')" ><img src="icons/16_large.png"  style="width:24px;height:24px;object-fit:contain;vertical-align:middle;margin-right:4px"> 대형</div>
+        <div class="diff-opt" id="size-medium" data-size="medium" onclick="selectSize('medium')"><img src="icons/17_medium.png" style="width:24px;height:24px;object-fit:contain;vertical-align:middle;margin-right:4px"> 중형</div>
+        <div class="diff-opt" id="size-small"  data-size="small"  onclick="selectSize('small')" ><img src="icons/18_small.png"  style="width:24px;height:24px;object-fit:contain;vertical-align:middle;margin-right:4px"> 소형</div>
+        <div class="diff-opt" id="size-mini"   data-size="mini"   onclick="selectSize('mini')"  ><img src="icons/19_mini.png"   style="width:24px;height:24px;object-fit:contain;vertical-align:middle;margin-right:4px"> 소품</div>
+        <div class="diff-opt" id="size-figure" data-size="figure" onclick="selectSize('figure')"><img src="icons/20_figure.png" style="width:24px;height:24px;object-fit:contain;vertical-align:middle;margin-right:4px"> 피규어</div>
       </div>
     </div>
 
@@ -1200,7 +1200,7 @@ async function loadReviews(docId) {
     const diffIcon    = { easy:'icons/04_easy.png', normal:'icons/05_normal.png', hard:'icons/06_hard.png' };
     const diffLabel   = { easy:'쉬움', normal:'보통', hard:'어려움' };
     const sizeLabel   = { large:'대형', medium:'중형', small:'소형', mini:'소품', figure:'피규어' };
-    const sizeEmoji   = { large:'🐻', medium:'🐰', small:'🐹', mini:'🪆', figure:'🗿' };
+    const sizeIconSrc = { large:'icons/16_large.png', medium:'icons/17_medium.png', small:'icons/18_small.png', mini:'icons/19_mini.png', figure:'icons/20_figure.png' };
     const diffClass   = { easy:'easy', normal:'normal', hard:'hard' };
 
     container.innerHTML = reviews.map(r => {
@@ -1227,7 +1227,7 @@ async function loadReviews(docId) {
           <span class="result-badge ${r.result}"><img src="${resultIcon[r.result]||''}" style="width:16px;height:16px;object-fit:contain;vertical-align:middle;margin-right:3px">${resultLabel[r.result] || r.result}</span>
         </div>
         <div class="review-invest">💰 ${(r.investment || 0).toLocaleString()}원 투자</div>
-        ${r.prizeName ? `<div class="review-prize">🧸 ${r.prizeName}${r.prizeSize ? ` <span style="font-size:0.75rem;background:#FFF0F3;color:var(--coral);border-radius:6px;padding:1px 7px;margin-left:4px">${sizeEmoji[r.prizeSize]||''} ${sizeLabel[r.prizeSize]||''}</span>` : ''}</div>` : ''}
+        ${r.prizeName ? `<div class="review-prize">🧸 ${r.prizeName}${r.prizeSize ? ` <span style="font-size:0.75rem;background:#FFF0F3;color:var(--coral);border-radius:6px;padding:1px 7px;margin-left:4px;display:inline-flex;align-items:center;gap:3px"><img src="${sizeIconSrc[r.prizeSize]||''}" style="width:13px;height:13px;object-fit:contain"> ${sizeLabel[r.prizeSize]||''}</span>` : ''}</div>` : ''}
         ${r.difficulty ? `<span class="difficulty-badge diff-${diffClass[r.difficulty]}"><img src="${diffIcon[r.difficulty]||''}" style="width:14px;height:14px;object-fit:contain;vertical-align:middle;margin-right:3px">${diffLabel[r.difficulty]}</span>` : ''}
         ${r.content ? `<div class="review-content" style="margin-top:6px">${r.content}</div>` : ''}
         ${photos ? `<div class="review-photos">${photos}</div>` : ''}
