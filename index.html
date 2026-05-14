@@ -1139,28 +1139,31 @@ function closeSheet() {
   setTimeout(() => { document.getElementById('bottom-sheet-body').scrollTop = 0; }, 360);
 }
 
+function updateFavBtn(active) {
+  const btn = document.getElementById('sh-fav-btn');
+  btn.innerHTML = `<img src="icons/10_favorite.png" style="width:22px;height:22px;object-fit:contain${active ? '' : ';opacity:0.4'}">`;
+  btn.classList.toggle('active', active);
+}
+
 async function loadFavoriteStatus() {
   if (!currentUser || !currentDocId) return;
   const snap = await db.collection('popspot_favorites').doc(`${currentUser.uid}_${currentDocId}`).get();
   currentFavorite = snap.exists;
-  const btn = document.getElementById('sh-fav-btn');
-  btn.textContent = currentFavorite ? '★' : '☆';
-  btn.classList.toggle('active', currentFavorite);
+  updateFavBtn(currentFavorite);
 }
 
 async function toggleFavorite() {
   if (!currentDocId || !currentUser) return;
   const ref = db.collection('popspot_favorites').doc(`${currentUser.uid}_${currentDocId}`);
   if (currentFavorite) {
-    await ref.delete(); currentFavorite = false;
-    document.getElementById('sh-fav-btn').innerHTML = '<img src="icons/10_favorite.png" style="width:22px;height:22px;object-fit:contain;opacity:0.45">';
-    document.getElementById('sh-fav-btn').classList.remove('active');
+    await ref.delete();
+    currentFavorite = false;
+    updateFavBtn(false);
     showToast('즐겨찾기에서 제거됐습니다.');
   } else {
     await ref.set({ uid: currentUser.uid, placeId: currentDocId, addedAt: firebase.firestore.FieldValue.serverTimestamp() });
     currentFavorite = true;
-    document.getElementById('sh-fav-btn').innerHTML = '<img src="icons/10_favorite.png" style="width:22px;height:22px;object-fit:contain">';
-    document.getElementById('sh-fav-btn').classList.add('active');
+    updateFavBtn(true);
     showToast('⭐ 즐겨찾기에 추가됐습니다!');
   }
 }
