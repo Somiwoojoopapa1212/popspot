@@ -1127,6 +1127,9 @@ async function openSheet(docId) {
   // 수정·신고 버튼 (로그인 사용자만)
   document.getElementById('sh-edit-bar').classList.toggle('hidden', !currentUser);
   document.getElementById('sh-report-bar').classList.toggle('hidden', !currentUser);
+  // 즐겨찾기: Firestore 조회 전 즉시 비활성 상태로 초기화 (race condition 방지)
+  currentFavorite = false;
+  updateFavBtn(false);
   loadFavoriteStatus();
   loadReviews(docId);
 }
@@ -1684,12 +1687,11 @@ async function submitForm() {
       if (selectedPlace.kakaoId) {
         const existing = allDocs.find(d => d.kakaoId && d.kakaoId === selectedPlace.kakaoId);
         if (existing) {
-          // allDocs 캐시 일치 → Firestore에서 실제 존재 여부 재확인
           const snap = await db.collection('popspot_locations').doc(existing.id).get();
           if (snap.exists) {
-            showToast('이미 등록된 지점입니다.'); hideLoading(); closeForm(); return;
+            showToast(`이미 등록된 지점입니다: ${existing.name}`);
+            hideLoading(); closeForm(); return;
           }
-          // Firestore에 없으면 캐시에서 제거 후 계속 진행
           allDocs = allDocs.filter(d => d.id !== existing.id);
         }
       }
