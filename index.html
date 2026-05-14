@@ -1487,7 +1487,7 @@ async function doSearch(query) {
     if (searchMode === 'find') {
       window._searchResults = { type: 'kakao', data: places };
       resultsEl.innerHTML = places.map((r, i) => {
-        const existing = allDocs.find(d => d.kakaoId === r.id);
+        const existing = r.id ? allDocs.find(d => d.kakaoId && d.kakaoId === r.id) : null;
         return `<div class="search-item" onclick="selectFromSearch(${i})">
           <div class="search-item-name">${r.place_name}${existing ? ' ✅' : ''}</div>
           <div class="search-item-addr">${r.road_address_name || r.address_name}</div>
@@ -1507,7 +1507,8 @@ async function doSearch(query) {
 
 function selectFromSearch(idx) {
   const r = window._searchResults.data[idx];
-  const existing = allDocs.find(d => d.kakaoId === r.id);
+  // r.id가 null/undefined이면 중복 체크 스킵 (주소 탭 결과)
+  const existing = r.id ? allDocs.find(d => d.kakaoId && d.kakaoId === r.id) : null;
   if (existing) {
     closeSearch();
     map.setView([existing.lat, existing.lng], 16);
