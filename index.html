@@ -699,6 +699,16 @@
   <div id="recent-reviews-list" style="flex:1;overflow-y:auto;padding:16px"></div>
 </div>
 
+<!-- 지역 필터 바텀시트 -->
+<div id="area-filter-sheet" style="display:none;position:fixed;inset:0;z-index:2000">
+  <div id="area-filter-backdrop" onclick="closeAreaFilter()" style="position:absolute;inset:0;background:rgba(0,0,0,0.4)"></div>
+  <div style="position:absolute;left:0;right:0;bottom:0;background:var(--card);border-radius:20px 20px 0 0;padding:20px 16px 32px;max-height:60vh;display:flex;flex-direction:column">
+    <div style="width:40px;height:4px;background:#FFD0DB;border-radius:2px;margin:0 auto 16px"></div>
+    <div style="font-weight:800;font-size:0.95rem;color:var(--text);margin-bottom:14px">지역 선택</div>
+    <div id="area-filter-chips" style="display:flex;flex-wrap:wrap;gap:8px;overflow-y:auto"></div>
+  </div>
+</div>
+
 <!-- 검색 오버레이 -->
 <div id="search-overlay">
   <div class="search-overlay-header">
@@ -1973,7 +1983,50 @@ function closeMenu() {
 }
 
 /* ════ 지역 필터 ════ */
-function openAreaFilter() { /* 향후 확장 */ }
+let currentAreaFilter = '';
+
+function extractRegion(address) {
+  if (!address) return '기타';
+  // "서울특별시 강남구..." → "강남구", "경기도 성남시 분당구..." → "성남시"
+  const parts = address.split(' ');
+  if (parts.length >= 2) return parts[1].replace(/특별시|광역시|특별자치시|특별자치도/g, '');
+  return parts[0];
+}
+
+function openAreaFilter() {
+  const sheet = document.getElementById('area-filter-sheet');
+  const chips = document.getElementById('area-filter-chips');
+  // 지역 목록 추출 (중복 제거, 가나다 정렬)
+  const regions = [...new Set(allDocs.map(d => extractRegion(d.address)))].sort();
+  const allChip = `<button onclick="applyAreaFilter('')" style="padding:8px 16px;border-radius:20px;border:1.5px solid ${currentAreaFilter==='' ? 'var(--coral)' : '#FFD0DB'};background:${currentAreaFilter==='' ? 'var(--coral)' : 'var(--card)'};color:${currentAreaFilter==='' ? 'white' : 'var(--text)'};font-family:'Pretendard',sans-serif;font-size:0.88rem;font-weight:700;cursor:pointer">전체</button>`;
+  chips.innerHTML = allChip + regions.map(r =>
+    `<button onclick="applyAreaFilter('${r}')" style="padding:8px 16px;border-radius:20px;border:1.5px solid ${currentAreaFilter===r ? 'var(--coral)' : '#FFD0DB'};background:${currentAreaFilter===r ? 'var(--coral)' : 'var(--card)'};color:${currentAreaFilter===r ? 'white' : 'var(--text)'};font-family:'Pretendard',sans-serif;font-size:0.88rem;cursor:pointer">${r}</button>`
+  ).join('');
+  sheet.style.display = 'block';
+}
+
+function closeAreaFilter() {
+  document.getElementById('area-filter-sheet').style.display = 'none';
+}
+
+function applyAreaFilter(region) {
+  currentAreaFilter = region;
+  closeAreaFilter();
+  // 필터 버튼 텍스트 갱신
+  document.getElementById('area-filter-btn').innerHTML =
+    `지역: ${region || '전체'} <span class="f-arrow">▾</span>`;
+  document.getElementById('area-filter-btn').classList.toggle('active', !!region);
+  // 마커 필터링
+  markerCluster.clearLayers();
+  allDocs.forEach(doc => {
+    if (!doc.lat || !doc.lng) return;
+    if (region && extractRegion(doc.address) !== region) return;
+    const marker = L.marker([doc.lat, doc.lng], { icon: createMarkerIcon(doc.name, doc.id) });
+    marker.on('click', (e) => { L.DomEvent.stopPropagation(e); openSheet(doc.id); });
+    markerCluster.addLayer(marker);
+    markers[doc.id] = marker;
+  });
+}
 
 /* ════ goHome ════ */
 function goHome() {
@@ -2069,6 +2122,8 @@ function hideLoading() { document.getElementById('loading').classList.add('hidde
   function tryCloseUI() {
     const pv = document.getElementById('photo-viewer-overlay');
     if (pv && pv.style.display === 'flex') { closePhotoViewer(); return true; }
+    const af = document.getElementById('area-filter-sheet');
+    if (af && af.style.display === 'block') { closeAreaFilter(); return true; }
     const rr = document.getElementById('recent-reviews-overlay');
     if (rr && rr.style.display === 'flex') { closeRecentReviews(); return true; }
     if (isOpen('admin-overlay'))     { closeAdmin();     return true; }
